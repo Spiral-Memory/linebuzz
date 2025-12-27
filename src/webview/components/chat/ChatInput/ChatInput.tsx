@@ -1,11 +1,34 @@
-import { h } from 'preact';
-import { useState, useRef } from 'preact/hooks';
+import { useState, useRef, useEffect } from 'preact/hooks';
 import { vscode } from '../../../utils/vscode';
-import './ChatInput.css';
+import { Snippet } from '../../../../types/IAttachment';
+import { CodeInput } from './CodeInput';
+import { MessageRequest } from '../../../../types/IMessage';
+import styles from './ChatInput.module.css';
 
-export const ChatInput = () => {
+interface ChatInputProps {
+    stagedSnippet?: Snippet[] | [];
+    onClearSnippet?: () => void;
+    onRemoveSnippet?: (index: number) => void;
+    onOpenSnippet?: (snippet: Snippet) => void;
+}
+
+export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet }: ChatInputProps) => {
     const [value, setValue] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        const handleFocus = () => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, []);
 
     const handleInput = (e: any) => {
         setValue(e.target.value);
@@ -22,14 +45,20 @@ export const ChatInput = () => {
     };
 
     const handleSend = () => {
-        if (!value.trim()) return;
-
+        if (!value.trim() && (!stagedSnippet || stagedSnippet.length === 0)) return;
+        const messageRequest: MessageRequest = {
+            content: value,
+            attachments: stagedSnippet || []
+        };
         vscode.postMessage({
             command: 'sendMessage',
-            text: value
+            body: messageRequest
         });
 
         setValue('');
+        if (onClearSnippet) {
+            onClearSnippet();
+        }
 
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -45,21 +74,32 @@ export const ChatInput = () => {
         }
     };
 
+    const hasAttachments = stagedSnippet && stagedSnippet.length > 0;
+
     return (
-        <div class="input-container">
+        <div class={styles['input-container']}>
             <textarea
                 ref={textareaRef}
-                class="chat-input"
+                class={styles['chat-input']}
                 value={value}
                 onInput={handleInput}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 rows={1}
             />
-            <div class="input-actions">
-                <div class="left-actions">
+
+            <div class={styles['composer-tools']}>
+                <div class={styles['input-attachments']}>
+                    {hasAttachments && onRemoveSnippet && stagedSnippet.map((snippet, index) => (
+                        <CodeInput
+                            key={`${snippet.file_path}-${index}`}
+                            snippet={snippet}
+                            onRemove={() => onRemoveSnippet(index)}
+                            onOpen={() => onOpenSnippet && onOpenSnippet(snippet)}
+                        />
+                    ))}
                 </div>
-                <button class={`send-button-icon ${value.trim() ? 'has-text' : ''}`} onClick={handleSend} aria-label="Send">
+                <button class={`${styles['send-button-icon']} ${value.trim() || hasAttachments ? styles['has-text'] : ''}`} onClick={handleSend} aria-label="Send">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
                         <path
                             d="m18.6357 15.6701 1.7164 -5.1493c1.4995 -4.49838 2.2492 -6.74758 1.0619 -7.93485 -1.1872 -1.18726 -3.4364 -0.43753 -7.9348 1.06193L8.32987 5.36432C4.69923 6.57453 2.88392 7.17964 2.36806 8.06698c-0.49075 0.84414 -0.49075 1.88671 0 2.73082 0.51586 0.8874 2.33117 1.4925 5.96181 2.7027 0.58295 0.1943 0.87443 0.2915 1.11806 0.4546 0.23611 0.158 0.43894 0.3609 0.59697 0.597 0.1631 0.2436 0.2603 0.5351 0.4546 1.118 1.2102 3.6307 1.8153 5.446 2.7027 5.9618 0.8441 0.4908 1.8867 0.4908 2.7308 0 0.8874 -0.5158 1.4925 -2.3311 2.7027 -5.9618Z"

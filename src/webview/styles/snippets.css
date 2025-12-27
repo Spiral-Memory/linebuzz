@@ -1,0 +1,106 @@
+.code-block-wrapper {
+    margin-top: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    text-align: left;
+    font-size: 10px;
+}
+
+.code-block-header {
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.code-metadata {
+    font-family: var(--vscode-font-family);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    text-transform: lowercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.copy-code-btn,
+.toggle-code-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+    height: 18px;
+    width: 18px;
+}
+
+.copy-code-btn:hover,
+.toggle-code-btn:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
+}
+
+.copy-code-btn svg,
+.toggle-code-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.code-block-content {
+    background-color: var(--vscode-editor-background);
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.1s ease, opacity 0.1s ease, padding 0.1s ease;
+    opacity: 1;
+}
+
+.code-block-wrapper.collapsed .code-block-content {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.code-block-wrapper.collapsed .code-block-content pre {
+    padding: 0;
+}
+
+.code-block-content pre {
+    margin: 0;
+    padding: 8px;
+    background: transparent;
+    border: none;
+    word-break: break-all;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    min-height: 0;
+    box-sizing: border-box;
+    transition: padding 0.1s ease;
+}
+
+.code-block-content code {
+    font-family: var(--vscode-editor-font-family, 'Courier New', monospace);
+    font-size: 12px;
+    background: none;
+}

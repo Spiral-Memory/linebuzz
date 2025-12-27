@@ -1,15 +1,18 @@
-import { h, Fragment } from 'preact';
+import { Fragment } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { ChatView } from './views/ChatView/ChatView';
 import { ConnectView } from './views/ConnectView/ConnectView';
 import { vscode } from './utils/vscode';
 import { useThemeDetector } from './hooks/useThemeDetector';
 import { atomOneDark, atomOneLight } from './constants/highlightThemes';
+import { Snippet } from '../types/IAttachment';
+import { LoadingBar } from './components/ui/Loaders/LoadingBar';
 
 interface AppState {
   isLoggedIn: boolean;
   hasTeam: boolean;
   isLoading: boolean;
+  stagedSnippet?: Snippet[] | [];
 }
 
 export function App() {
@@ -17,33 +20,61 @@ export function App() {
   const [state, setState] = useState<AppState>({
     isLoggedIn: false,
     hasTeam: false,
-    isLoading: true
+    isLoading: true,
+    stagedSnippet: []
   });
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       switch (message.command) {
-        case 'updateState':
-          setState({
+        case 'updateIdentityState':
+          setState(prev => ({
+            ...prev,
             isLoggedIn: message.state.isLoggedIn,
             hasTeam: message.state.hasTeam,
             isLoading: false
-          });
+          }));
+          break;
+        case 'updateSnippet':
+          setState(prev => ({
+            ...prev,
+            stagedSnippet: message.snippet
+          }));
           break;
       }
     };
 
     window.addEventListener('message', handleMessage);
-    vscode.postMessage({ command: 'getState' });
+    vscode.postMessage({ command: 'getWebviewState' });
 
     return () => {
       window.removeEventListener('message', handleMessage);
     };
   }, []);
 
+  const handleRemoveSnippet = (index: number) => {
+    vscode.postMessage({
+      command: 'removeSnippet',
+      index
+    });
+  };
+
+  const handleClearSnippet = () => {
+    vscode.postMessage({
+      command: 'clearSnippet'
+    });
+  };
+
+  const handleOpenSnippet = (snippet: Snippet) => {
+    vscode.postMessage({
+      command: 'openSnippet',
+      snippet
+    });
+  };
+
   if (state.isLoading) {
-    return <div style={{ padding: '20px', color: 'var(--vscode-descriptionForeground)' }}>Loading...</div>;
+    return <LoadingBar />;
   }
 
   if (!state.isLoggedIn || !state.hasTeam) {
@@ -53,7 +84,12 @@ export function App() {
   return (
     <Fragment>
       <style>{theme === 'light' ? atomOneLight : atomOneDark}</style>
-      <ChatView />
+      <ChatView
+        stagedSnippet={state.stagedSnippet}
+        onClearSnippet={handleClearSnippet}
+        onRemoveSnippet={handleRemoveSnippet}
+        onOpenSnippet={handleOpenSnippet}
+      />
     </Fragment>
   );
 }

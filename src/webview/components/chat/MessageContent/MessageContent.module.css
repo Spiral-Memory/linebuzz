@@ -1,0 +1,109 @@
+.message-content {
+    color: var(--vscode-editor-foreground);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.markdown-body {
+    line-height: 1.6;
+}
+
+.markdown-body p {
+    margin: 0 0 8px 0;
+}
+
+.markdown-body p:last-child {
+    margin-bottom: 0;
+}
+
+.markdown-body strong {
+    font-weight: 700;
+    color: var(--vscode-textPreformat-foreground);
+}
+
+.markdown-body em {
+    font-style: italic;
+}
+
+.markdown-body blockquote {
+    border-left: 4px solid var(--vscode-textBlockQuote-border);
+    background-color: var(--vscode-textBlockQuote-background);
+    color: var(--vscode-descriptionForeground);
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.markdown-body a {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+}
+
+.markdown-body a:hover {
+    text-decoration: underline;
+    color: var(--vscode-textLink-activeForeground);
+}
+
+.markdown-body hr {
+    border: none;
+    border-top: 1px solid var(--vscode-widget-border);
+    margin: 12px 0;
+}
+
+.markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0;
+    border: 1px solid var(--vscode-widget-border);
+}
+
+.markdown-body th,
+.markdown-body td {
+    border: 1px solid var(--vscode-widget-border);
+    padding: 8px;
+    text-align: left;
+}
+
+.markdown-body th {
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    font-weight: 600;
+}
+
+.markdown-body tr:nth-child(even) {
+    background-color: rgba(127, 127, 127, 0.05);
+}
+
+.markdown-body code:not(:global(.hljs)) {
+    background-color: var(--vscode-textBlockQuote-background);
+    color: var(--vscode-textPreformat-foreground);
+    border-radius: 4px;
+    font-family: var(--vscode-editor-font-family, 'Courier New', monospace);
+    font-size: 0.9em;
+}
+
+.message-content.is-me {
+    text-align: right;
+}
+
+.message-content.is-me ul,
+.message-content.is-me ol {
+    text-align: right;
+    padding: 0 12px;
+    margin: 0;
+    direction: rtl;
+}
+
+.message-content.is-me blockquote {
+    text-align: left;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--vscode-editor-foreground);
+    border-left: 4px solid var(--vscode-textBlockQuote-border);
+}
+
+.message-content.is-me :global(.code-block-wrapper) {
+    text-align: left;
+}

@@ -13,9 +13,11 @@ import { createTeamCommand } from "./core/commands/CreateTeamCommand";
 import { sendMessageCommand } from "./core/commands/SendMessageCommand";
 import { joinTeamCommand } from "./core/commands/JoinTeamCommand";
 import { leaveTeamCommand } from "./core/commands/LeaveTeamCommand";
+import { captureSnippetCommand } from "./core/commands/CaptureSnippetCommand";
 import { TeamFeedProvider } from "./core/providers/TeamFeedProvider";
 import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
-
+import { SnippetService } from "./core/services/SnippetService";
+import { NavigatorService } from "./core/services/NavigatorService";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -36,8 +38,15 @@ export async function activate(context: vscode.ExtensionContext) {
         const messageService = new MessageService(supabaseMessageRepository);
         Container.register('MessageService', messageService);
 
-        const teamFeedPanelProvider = new TeamFeedProvider();
-        vscode.window.registerTreeDataProvider(TeamFeedProvider.viewId, teamFeedPanelProvider);
+        const snippetService = new SnippetService();
+        Container.register('SnippetService', snippetService);
+        
+        const navigatorService = new NavigatorService();
+        Container.register('NavigatorService', navigatorService);
+
+
+        // const teamFeedPanelProvider = new TeamFeedProvider();
+        // vscode.window.registerTreeDataProvider(TeamFeedProvider.viewId, teamFeedPanelProvider);
 
         const chatPanelProvider = new ChatPanelProvider(context.extensionUri);
         context.subscriptions.push(
@@ -49,7 +58,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('linebuzz.createTeam', createTeamCommand),
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
-            vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand)
+            vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
+            vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand)
         );
 
     } catch (e) {
@@ -71,3 +81,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(disposable);
 }
+
+// --- Hiding team feed for now ---
+
+// {
+//     "id": "linebuzz.teamfeed",
+//     "icon": "assets/logo.svg",
+//     "name": "Team Feed",
+//     "when": "extension.isLoggedIn && linebuzz.hasTeam"
+// },

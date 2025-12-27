@@ -1,17 +1,18 @@
-import { IMessageRepository, MessageInfo } from "../interfaces/IMessageRepository";
+import { IMessageRepository } from "../interfaces/IMessageRepository";
+import { MessageRequest, MessageResponse } from "../../types/IMessage";
 import { SupabaseClient } from "./SupabaseClient";
 import { logger } from "../../core/utils/logger";
 
 export class SupabaseMessageRepository implements IMessageRepository {
-    async sendMessage(message: string, teamId: string): Promise<MessageInfo> {
+    async sendMessage(message: MessageRequest, teamId: string): Promise<MessageResponse> {
         const supabase = SupabaseClient.getInstance().client;
-        logger.info("SupabaseMessageRepository", `Sending message: ${message} in team: ${teamId}`);
+        logger.info("SupabaseMessageRepository", `Sending message: ${JSON.stringify(message)}} in team: ${teamId}`);
 
         const { data, error } = await supabase.rpc('create_message', {
             p_team_id: teamId,
+            p_content: message.content,
+            p_attachments: message.attachments,
             p_parent_id: null,
-            p_content: message,
-            p_is_code_thread: false
         });
         if (error) {
             logger.error("SupabaseMessageRepository", "RPC call failed", error);
@@ -32,7 +33,7 @@ export class SupabaseMessageRepository implements IMessageRepository {
         throw new Error(`Unexpected response status: ${response.status}`);
     }
 
-    async getMessages(teamId: string, limit: number = 50, offset: number = 0): Promise<MessageInfo[]> {
+    async getMessages(teamId: string, limit: number = 50, offset: number = 0): Promise<MessageResponse[]> {
         const supabase = SupabaseClient.getInstance().client;
         logger.info("SupabaseMessageRepository", `Getting messages for team: ${teamId} limit: ${limit} offset: ${offset}`);
 
@@ -60,7 +61,7 @@ export class SupabaseMessageRepository implements IMessageRepository {
         return [];
     }
 
-    async subscribeToMessages(teamId: string, userId: string, callback: (message: MessageInfo) => void): Promise<{ unsubscribe: () => void }> {
+    async subscribeToMessages(teamId: string, userId: string, callback: (message: MessageResponse) => void): Promise<{ unsubscribe: () => void }> {
         const supabase = SupabaseClient.getInstance().client;
         logger.info("SupabaseMessageRepository", `Subscribing to messages for team: ${teamId}`);
 

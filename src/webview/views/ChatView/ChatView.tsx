@@ -1,18 +1,22 @@
-import { h } from 'preact';
 import { useEffect, useLayoutEffect, useState, useRef } from 'preact/hooks';
-
 import { ChatInput } from '../../components/chat/ChatInput/ChatInput';
-import { MessageContent } from '../../components/chat/MessageContent/MessageContent';
-import { vscode } from '../../utils/vscode';
-import { getInitials } from '../../utils/getInitials';
-import { formatTime } from '../../utils/formatTime';
-import { getAvatarColor } from '../../utils/getAvatarColor';
+import { MessageRow } from '../../components/chat/MessageRow/MessageRow';
+import { MessageResponse } from '../../../types/IMessage';
 import { WelcomeSplash } from '../../components/chat/WelcomeSplash/WelcomeSplash';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner/LoadingSpinner';
-import './ChatView.css';
+import { LoadingSpinner } from '../../components/ui/Loaders/LoadingSpinner';
+import { Snippet } from '../../../types/IAttachment';
+import { vscode } from '../../utils/vscode';
+import styles from './ChatView.module.css';
 
-export const ChatView = () => {
-    const [messages, setMessages] = useState<any[]>([]);
+interface ChatViewProps {
+    stagedSnippet?: Snippet[] | [];
+    onClearSnippet?: () => void;
+    onRemoveSnippet?: (index: number) => void;
+    onOpenSnippet?: (snippet: Snippet) => void;
+}
+
+export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet }: ChatViewProps) => {
+    const [messages, setMessages] = useState<MessageResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [offset, setOffset] = useState(0);
@@ -114,7 +118,6 @@ export const ChatView = () => {
         };
 
         window.addEventListener('message', handleMessage);
-
         vscode.postMessage({ command: 'getMessages', limit: LIMIT, offset: 0 });
 
         return () => {
@@ -123,57 +126,42 @@ export const ChatView = () => {
     }, []);
 
     return (
-        <div class="chat-view-container" ref={chatContainerRef}>
+        <div class={styles['chat-view-container']} ref={chatContainerRef}>
             {messages.length === 0 ? (
-                <div class="splash-container">
+                <div class={styles['splash-container']}>
                     <WelcomeSplash />
                 </div>
             ) : (
-                <div class="message-list" ref={messageListRef} onScroll={handleScroll}>
+                <div class={styles['message-list']} ref={messageListRef} onScroll={handleScroll}>
                     {isLoading && <LoadingSpinner />}
                     {messages.map((msg) => {
-                        const displayName = msg.u?.display_name || msg.u?.username || 'Unknown';
-                        const avatarUrl = msg.u?.avatar_url;
-                        const initials = getInitials(displayName);
-                        const avatarColor = getAvatarColor(displayName);
-
                         return (
-                            <div class={`message-row ${msg.userType === 'me' ? 'message-row-me' : ''}`} key={msg.message_id}>
-                                <div class="avatar-container">
-                                    {avatarUrl ? (
-                                        <img src={avatarUrl} alt={displayName} class="avatar-image" onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                            ((e.target as HTMLImageElement).nextElementSibling as HTMLElement).style.display = 'flex';
-                                        }} />
-                                    ) : null}
-                                    <div class="avatar-fallback" style={{ display: avatarUrl ? 'none' : 'flex', backgroundColor: avatarColor, color: '#fff' }}>
-                                        {initials}
-                                    </div>
-                                </div>
-                                <div class="message-body">
-                                    <div class="message-header">
-                                        {msg.userType !== 'me' && <span class="user-name">{displayName}</span>}
-                                        <span class="message-time">{formatTime(msg.created_at)}</span>
-                                    </div>
-                                    <MessageContent content={msg.content} />
-                                </div>
-                            </div>
+                            <MessageRow
+                                message={msg}
+                                key={msg.message_id}
+                                onOpenSnippet={onOpenSnippet}
+                            />
                         );
                     })}
                     <div ref={messagesEndRef} />
                     {unreadCount > 0 && (
-                        <div class="new-messages-indicator" onClick={scrollToBottom}>
+                        <div class={styles['new-messages-indicator']} onClick={scrollToBottom}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M7 13L12 18L17 13M7 6L12 11L17 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <span class="indicator-count">{unreadCount}</span>
+                            <span class={styles['indicator-count']}>{unreadCount}</span>
                         </div>
                     )}
                 </div>
             )}
-            <div class="chat-input-container">
-                <ChatInput />
+            <div class={styles['chat-input-container']}>
+                <ChatInput
+                    stagedSnippet={stagedSnippet}
+                    onClearSnippet={onClearSnippet}
+                    onRemoveSnippet={onRemoveSnippet}
+                    onOpenSnippet={onOpenSnippet}
+                />
             </div>
-        </div >
+        </div>
     );
 };
