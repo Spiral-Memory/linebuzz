@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/Spiral-Memory/LineBuzz.git"
   },
-  "version": "0.0.1",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.102.0"
   },
