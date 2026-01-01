@@ -178,6 +178,7 @@
     "git-url-parse": "^16.1.0",
     "he": "^1.2.0",
     "highlight.js": "^11.11.1",
+    "lru-cache": "^11.2.4",
     "marked": "^17.0.1",
     "seti-file-icons": "^0.0.8"
   }
