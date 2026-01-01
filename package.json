@@ -46,6 +46,16 @@
         "command": "linebuzz.captureSnippet",
         "title": "Capture Snippet",
         "category": "LineBuzz"
+      },
+      {
+        "command": "linebuzz.activateBuzz",
+        "title": "Show Inline Discussions",
+        "icon": "$(code)"
+      },
+      {
+        "command": "linebuzz.deactivateBuzz",
+        "title": "Hide Inline Discussions",
+        "icon": "$(coffee)"
       }
     ],
     "keybindings": [
@@ -92,6 +102,18 @@
         {
           "command": "linebuzz.captureSnippet",
           "group": "9_cutcopypaste@99"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "linebuzz.activateBuzz",
+          "when": "view == linebuzz.chatpanel && !linebuzz.isBuzzActive",
+          "group": "navigation"
+        },
+        {
+          "command": "linebuzz.deactivateBuzz",
+          "when": "view == linebuzz.chatpanel && linebuzz.isBuzzActive",
+          "group": "navigation"
         }
       ]
     },

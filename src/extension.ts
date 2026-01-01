@@ -18,6 +18,8 @@ import { TeamFeedProvider } from "./core/providers/TeamFeedProvider";
 import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
+import { activateBuzzCommand } from "./core/commands/ActivateBuzzCommand";
+import { deactivateBuzzCommand } from "./core/commands/DeactivateBuzzCommand";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -59,7 +61,9 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
-            vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand)
+            vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand),
+            vscode.commands.registerCommand('linebuzz.activateBuzz', activateBuzzCommand),
+            vscode.commands.registerCommand('linebuzz.deactivateBuzz', deactivateBuzzCommand)
         );
 
     } catch (e) {
