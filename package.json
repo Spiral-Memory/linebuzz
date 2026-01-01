@@ -48,12 +48,12 @@
         "category": "LineBuzz"
       },
       {
-        "command": "linebuzz.activateBuzz",
+        "command": "linebuzz.activateCLens",
         "title": "Show Inline Discussions",
         "icon": "$(code)"
       },
       {
-        "command": "linebuzz.deactivateBuzz",
+        "command": "linebuzz.deactivateCLens",
         "title": "Hide Inline Discussions",
         "icon": "$(coffee)"
       }
@@ -106,13 +106,13 @@
       ],
       "view/title": [
         {
-          "command": "linebuzz.activateBuzz",
-          "when": "view == linebuzz.chatpanel && !linebuzz.isBuzzActive",
+          "command": "linebuzz.activateCLens",
+          "when": "view == linebuzz.chatpanel && !linebuzz.isCLensActive",
           "group": "navigation"
         },
         {
-          "command": "linebuzz.deactivateBuzz",
-          "when": "view == linebuzz.chatpanel && linebuzz.isBuzzActive",
+          "command": "linebuzz.deactivateCLens",
+          "when": "view == linebuzz.chatpanel && linebuzz.isCLensActive",
           "group": "navigation"
         }
       ]
