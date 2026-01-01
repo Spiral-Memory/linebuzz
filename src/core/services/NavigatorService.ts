@@ -82,4 +82,7 @@ export class NavigatorService {
             logger.info('NavigatorService', 'Navigated to snippet', snippet);
         }
     }
+    public dispose() {
+        this.snippetDecoration.dispose();
+    }
 }

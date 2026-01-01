@@ -18,7 +18,7 @@ import { TeamFeedProvider } from "./core/providers/TeamFeedProvider";
 import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
-import { activateCLensCommand, deactivateCLensCommand} from "./core/commands/ActivateCLensCommand";
+import { activateCLensCommand, deactivateCLensCommand } from "./core/commands/ActivateCLensCommand";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -27,11 +27,13 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
         const supabaseTeamRepository = new SupabaseTeamRepository();
         const teamService = new TeamService(supabaseTeamRepository);
+        context.subscriptions.push(teamService);
         Container.register('TeamService', teamService);
         await teamService.initialize();
 
         const supbaseAuthRepository = new SupabaseAuthRepository();
         authService = new AuthService(supbaseAuthRepository);
+        context.subscriptions.push(authService);
         Container.register('AuthService', authService);
         await authService.initializeSession(false);
 
@@ -40,9 +42,11 @@ export async function activate(context: vscode.ExtensionContext) {
         Container.register('MessageService', messageService);
 
         const snippetService = new SnippetService();
+        context.subscriptions.push(snippetService);
         Container.register('SnippetService', snippetService);
-        
+
         const navigatorService = new NavigatorService();
+        context.subscriptions.push(navigatorService);
         Container.register('NavigatorService', navigatorService);
 
 
