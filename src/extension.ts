@@ -82,6 +82,16 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('linebuzz.deactivateCLens', deactivateCLensCommand)
         );
 
+        vscode.commands.registerCommand("clens.openPeek", async (uri: vscode.Uri, line: number) => {
+            // Moves cursor and forces the hover to stay open (Pinned)
+            const editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.uri.toString() === uri.toString()) {
+                const pos = new vscode.Position(line, 0);
+                editor.selection = new vscode.Selection(pos, pos);
+                await vscode.commands.executeCommand("editor.action.showHover");
+            }
+        });
+
     } catch (e) {
         logger.error("Extension", "Failed to activate extension:", e);
         return;

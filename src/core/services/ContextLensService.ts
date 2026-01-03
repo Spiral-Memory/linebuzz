@@ -16,15 +16,14 @@ interface FileData extends FileContext {
 }
 
 export class ContextLensService {
-    private decorationType: vscode.TextEditorDecorationType;
+    private buzzDecorationType: vscode.TextEditorDecorationType;
     private _onDidChange = new vscode.EventEmitter<void>();
     public readonly onDidChange = this._onDidChange.event;
 
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
-        this.decorationType = vscode.window.createTextEditorDecorationType({
-            gutterIconSize: 'contain',
-            gutterIconPath: context.asAbsolutePath("assets/logo.svg")
-        });
+        this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
+            isWholeLine: false,
+        })
     }
 
     private cache = new LRUCache<string, FileData>({
@@ -43,32 +42,17 @@ export class ContextLensService {
             if (!context) return [];
 
             try {
-                // Check if we already have a pending request for this file to avoid race conditions?
-                // For simplicity, just fetch.
                 const teamService = Container.get("TeamService");
                 const currentTeam = teamService.getTeam();
-                if (!currentTeam) {
-                    return [];
-                }
+                if (!currentTeam) return [];
 
                 logger.info('ContextLensService', 'Fetching discussions', context);
                 const discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
-                logger.info('ContextLensService', 'Fetched discussions', discussions);
 
-                fileData = {
-                    ...context,
-                    discussions
-                };
+                fileData = { ...context, discussions };
                 this.cache.set(uri.toString(), fileData);
-
-                // Fire event to notify that data has changed, so the provider can re-query if needed
-                // actually, since we are inside the provideCodeLenses flow (via provider), we are returning the lenses now.
-                // However, since getCodeLenses is async, the provider will be awaiting this.
-                // If we were fetching in background, we would need the event.
-                // Since we are fetching on demand *inside* the request, we just return the result.
-                // BUT, to be safe and allow other parts to know, or if we want to refresh later:
                 this._onDidChange.fire();
-
+                return [];
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
                 return [];
@@ -77,23 +61,61 @@ export class ContextLensService {
 
         const threads = new Map<number, CodeDiscussion[]>();
         fileData.discussions.forEach(d => {
-            const list = threads.get(d.start_line) || [];
+            const lineIdx = d.start_line - 1;
+            const list = threads.get(lineIdx) || [];
             list.push(d);
-            threads.set(d.start_line, list);
+            threads.set(lineIdx, list);
         });
 
         const lenses: vscode.CodeLens[] = [];
-        threads.forEach((discussions, line) => {
-            const range = new vscode.Range(line - 1, 0, line - 1, 0);
+        threads.forEach((discussions, lineIdx) => {
+            const range = new vscode.Range(lineIdx, 0, lineIdx, 0);
 
             lenses.push(new vscode.CodeLens(range, {
-                title: `☕ ${discussions.length} Discussion${discussions.length > 1 ? 's' : ''}`,
-                command: "clens.openDiscussion",
-                arguments: [uri, line, discussions]
+                title: `☕ ${discussions.length} Buzz`,
+                command: "clens.openPeek",
+                arguments: [uri, lineIdx, discussions]
             }));
         });
 
+        this.applyHoverDecorations(uri, threads);
         return lenses;
+    }
+
+    private applyHoverDecorations(uri: vscode.Uri, threads: Map<number, CodeDiscussion[]>) {
+        const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri.toString());
+        if (!editor) return;
+
+        const decorations: vscode.DecorationOptions[] = [];
+        threads.forEach((discussions, lineIdx) => {
+            decorations.push({
+                range: new vscode.Range(lineIdx, 0, lineIdx, 0),
+                hoverMessage: this.createMarkdownPopup(discussions)
+            });
+        });
+
+        editor.setDecorations(this.buzzDecorationType, decorations);
+    }
+
+    private createMarkdownPopup(discussions: CodeDiscussion[]): vscode.MarkdownString {
+        const md = new vscode.MarkdownString('', true);
+        md.isTrusted = true;
+        md.supportHtml = true;
+
+        md.appendMarkdown(`### $(comment-discussion) LineBuzz Thread\n\n---\n\n`);
+
+        discussions.forEach((d, i) => {
+            const date = d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Recent';
+            md.appendMarkdown(`> ${d.content}\n\n`);
+            md.appendMarkdown(`*$(git-commit) ${d.commit_sha.substring(0, 7)} • $(calendar) ${date}*\n\n`);
+            if (i < discussions.length - 1) md.appendMarkdown('---\n\n');
+        });
+
+        const first = discussions[0];
+        const args = encodeURIComponent(JSON.stringify([first.commit_sha]));
+        md.appendMarkdown(`---\n[$(git-compare) View History](command:clens.showDiff?${args})`);
+
+        return md;
     }
 
     private async getFileContext(document: vscode.TextDocument): Promise<FileContext | void> {
