@@ -21,6 +21,7 @@ import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
 import { activateCLensCommand, deactivateCLensCommand } from "./core/commands/ActivateCLensCommand";
+import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -52,17 +53,14 @@ export async function activate(context: vscode.ExtensionContext) {
         Container.register('NavigatorService', navigatorService);
 
         const supabaseCodeRepository = new SupabaseCodeRepository();
-        const contextLensService = new ContextLensService(supabaseCodeRepository);
+        const contextLensService = new ContextLensService(supabaseCodeRepository, context);
         context.subscriptions.push(contextLensService);
         Container.register('ContextLensService', contextLensService);
 
+        const codeLensProvider = new CodeLensProvider(contextLensService);
         context.subscriptions.push(
-        vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-            if (editor && editor.document.uri.scheme === 'file') {
-                await contextLensService.handleFileActivation(editor);
-            }
-        })
-    );
+            vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
+        );
 
 
         // const teamFeedPanelProvider = new TeamFeedProvider();
