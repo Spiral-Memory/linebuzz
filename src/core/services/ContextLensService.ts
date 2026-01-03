@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from 'path';
 import * as fs from 'fs';
+import { formatDistanceToNow } from 'date-fns';
 import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
 import { Container } from "./ServiceContainer";
@@ -17,8 +18,6 @@ interface FileData extends FileContext {
 
 export class ContextLensService {
     private buzzDecorationType: vscode.TextEditorDecorationType;
-    private _onDidChange = new vscode.EventEmitter<void>();
-    public readonly onDidChange = this._onDidChange.event;
 
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
@@ -51,7 +50,6 @@ export class ContextLensService {
 
                 fileData = { ...context, discussions };
                 this.cache.set(uri.toString(), fileData);
-                this._onDidChange.fire();
                 return [];
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
@@ -70,9 +68,10 @@ export class ContextLensService {
         const lenses: vscode.CodeLens[] = [];
         threads.forEach((discussions, lineIdx) => {
             const range = new vscode.Range(lineIdx, 0, lineIdx, 0);
-
+            const latestTimestamp = Math.max(...discussions.map(d => new Date(d.created_at).getTime()));
+            const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
             lenses.push(new vscode.CodeLens(range, {
-                title: `☕ ${discussions.length} Buzz`,
+                title: `☕ ${discussions.length} References, ${timeAgo}`,
                 command: "clens.openPeek",
                 arguments: [uri, lineIdx, discussions]
             }));
@@ -102,12 +101,9 @@ export class ContextLensService {
         md.isTrusted = true;
         md.supportHtml = true;
 
-        md.appendMarkdown(`### $(comment-discussion) LineBuzz Thread\n\n---\n\n`);
-
         discussions.forEach((d, i) => {
-            const date = d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Recent';
-            md.appendMarkdown(`> ${d.content}\n\n`);
-            md.appendMarkdown(`*$(git-commit) ${d.commit_sha.substring(0, 7)} • $(calendar) ${date}*\n\n`);
+            const timeAgo = formatDistanceToNow(new Date(d.created_at), { addSuffix: true });
+            md.appendMarkdown(`*$(git-commit) ${d.commit_sha.substring(0, 7)} • ${timeAgo}*\n\n`);
             if (i < discussions.length - 1) md.appendMarkdown('---\n\n');
         });
 
@@ -122,7 +118,6 @@ export class ContextLensService {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (!gitExtension) {
             logger.error('ContextLensService', 'Git extension not found.');
-            // vscode.window.showErrorMessage('Please enable Git extension in VSCode.'); // Don't spam notifications
             return;
         }
 
@@ -161,6 +156,5 @@ export class ContextLensService {
 
     public dispose() {
         this.cache.clear();
-        this._onDidChange.dispose();
     }
 }

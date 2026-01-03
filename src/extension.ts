@@ -83,7 +83,6 @@ export async function activate(context: vscode.ExtensionContext) {
         );
 
         vscode.commands.registerCommand("clens.openPeek", async (uri: vscode.Uri, line: number) => {
-            // Moves cursor and forces the hover to stay open (Pinned)
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document.uri.toString() === uri.toString()) {
                 const pos = new vscode.Position(line, 0);

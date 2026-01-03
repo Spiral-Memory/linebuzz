@@ -11,7 +11,7 @@ export class NavigatorService {
         backgroundColor: new vscode.ThemeColor('editor.wordHighlightStrongBackground'),
         isWholeLine: true,
     });
-
+    
     public async openSnippet(snippet: Snippet): Promise<void> {
         if (!snippet) return;
 
