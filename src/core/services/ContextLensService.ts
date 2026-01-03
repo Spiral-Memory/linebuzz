@@ -17,14 +17,8 @@ interface FileData extends FileContext {
 }
 
 export class ContextLensService {
+    private _isCLensActive: boolean = false
     private buzzDecorationType: vscode.TextEditorDecorationType;
-
-    constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
-        this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
-            isWholeLine: false,
-        })
-    }
-
     private cache = new LRUCache<string, FileData>({
         max: 100,
         ttl: 1000 * 60 * 30,
@@ -32,7 +26,26 @@ export class ContextLensService {
         allowStale: false
     });
 
+    constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
+        this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
+            isWholeLine: false,
+        })
+    }
+
+    public toggleCodeLens(value: boolean) {
+        if (!value) {
+            this.cache.clear();
+            vscode.window.visibleTextEditors.forEach(editor => {
+                editor.setDecorations(this.buzzDecorationType, []);
+            });
+        }
+        this._isCLensActive = value;
+    }
+
     public async getCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
+        if (!this._isCLensActive) {
+            return [];
+        }
         const uri = document.uri;
         let fileData = this.cache.get(uri.toString());
 
@@ -50,7 +63,6 @@ export class ContextLensService {
 
                 fileData = { ...context, discussions };
                 this.cache.set(uri.toString(), fileData);
-                return [];
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
                 return [];

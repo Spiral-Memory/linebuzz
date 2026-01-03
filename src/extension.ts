@@ -20,7 +20,7 @@ import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
-import { activateCLensCommand, deactivateCLensCommand } from "./core/commands/ActivateCLensCommand";
+import { activateCLensCommand, deactivateCLensCommand } from "./core/commands/ToggleCLensCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -73,23 +73,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand('linebuzz.login', loginCommand),
-            vscode.commands.registerCommand('linebuzz.createTeam', createTeamCommand),
+            vscode.commands.registerCommand('linebuzz.createTeam', () => createTeamCommand()),
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
             vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand),
-            vscode.commands.registerCommand('linebuzz.activateCLens', activateCLensCommand),
-            vscode.commands.registerCommand('linebuzz.deactivateCLens', deactivateCLensCommand)
-        );
+            vscode.commands.registerCommand('linebuzz.activateCLens', () =>
+                activateCLensCommand(codeLensProvider)
+            ),
 
-        vscode.commands.registerCommand("clens.openPeek", async (uri: vscode.Uri, line: number) => {
-            const editor = vscode.window.activeTextEditor;
-            if (editor && editor.document.uri.toString() === uri.toString()) {
-                const pos = new vscode.Position(line, 0);
-                editor.selection = new vscode.Selection(pos, pos);
-                await vscode.commands.executeCommand("editor.action.showHover");
+            vscode.commands.registerCommand('linebuzz.deactivateCLens', () =>
+                deactivateCLensCommand(codeLensProvider)
+            ),
+
+            vscode.commands.registerCommand("clens.openPeek", async (uri: vscode.Uri, line: number) => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && editor.document.uri.toString() === uri.toString()) {
+                    const pos = new vscode.Position(line, 0);
+                    editor.selection = new vscode.Selection(pos, pos);
+                    await vscode.commands.executeCommand("editor.action.showHover");
+                }
             }
-        });
+            ));
 
     } catch (e) {
         logger.error("Extension", "Failed to activate extension:", e);
