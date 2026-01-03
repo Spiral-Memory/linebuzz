@@ -5,6 +5,7 @@ import { Container } from './core/services/ServiceContainer';
 import { Storage } from "./core/platform/storage";
 import { logger } from './core/utils/logger';
 import { SupabaseTeamRepository } from "./adapters/supabase/SupabaseTeamRepository";
+import { SupabaseCodeRepository } from "./adapters/supabase/SupabaseCodeRepository";
 import { TeamService } from "./core/services/TeamService";
 import { MessageService } from "./core/services/MessageService";
 import { SupabaseMessageRepository } from "./adapters/supabase/SupabaseMessageRepository";
@@ -18,6 +19,7 @@ import { TeamFeedProvider } from "./core/providers/TeamFeedProvider";
 import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
+import { ContextLensService } from "./core/services/ContextLensService";
 import { activateCLensCommand, deactivateCLensCommand } from "./core/commands/ActivateCLensCommand";
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -48,6 +50,19 @@ export async function activate(context: vscode.ExtensionContext) {
         const navigatorService = new NavigatorService();
         context.subscriptions.push(navigatorService);
         Container.register('NavigatorService', navigatorService);
+
+        const supabaseCodeRepository = new SupabaseCodeRepository();
+        const contextLensService = new ContextLensService(supabaseCodeRepository);
+        context.subscriptions.push(contextLensService);
+        Container.register('ContextLensService', contextLensService);
+
+        context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+            if (editor && editor.document.uri.scheme === 'file') {
+                await contextLensService.handleFileActivation(editor);
+            }
+        })
+    );
 
 
         // const teamFeedPanelProvider = new TeamFeedProvider();

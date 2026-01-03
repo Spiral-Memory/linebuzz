@@ -3,14 +3,21 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
+import { Container } from "./ServiceContainer";
+import { CodeDiscussion, ICodeRepository } from "../../adapters/interfaces/ICodeRepository";
 
-export interface FileData {
+interface FileContext {
     file_path: string;
     remote_url: string;
-    discussions: any[];
+}
+
+interface FileData extends FileContext {
+    discussions: CodeDiscussion[];
 }
 
 export class ContextLensService {
+    constructor(private codeRepo: ICodeRepository) { }
+
     private cache = new LRUCache<string, FileData>({
         max: 100,
         ttl: 1000 * 60 * 30,
@@ -23,6 +30,7 @@ export class ContextLensService {
 
         const cached = this.cache.get(uri.toString());
         if (cached) {
+            logger.info('ContextLensService', 'Using cached discussions', cached.discussions);
             this.render(editor, cached.discussions);
             return;
         }
@@ -30,8 +38,14 @@ export class ContextLensService {
         if (!context) return;
 
         try {
-            // Delegate: We will call adapters later to get discussions
-            const discussions: any[] = [];
+            logger.info('ContextLensService', 'Fetching discussions', context);
+            const teamService = Container.get("TeamService");
+            const currentTeam = teamService.getTeam();
+            if (!currentTeam) {
+                return;
+            }
+            const discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
+            logger.info('ContextLensService', 'Fetched discussions', discussions);
 
             this.cache.set(uri.toString(), {
                 ...context,
@@ -43,11 +57,11 @@ export class ContextLensService {
         }
     }
 
-    private render(editor: vscode.TextEditor, discussions: any[]) {
+    private render(editor: vscode.TextEditor, discussions: CodeDiscussion[]) {
         logger.info('ContextLensService', 'Rendering discussions', discussions);
     }
 
-    private async getFileContext(editor: vscode.TextEditor): Promise<Pick<FileData, 'file_path' | 'remote_url'> | void> {
+    private async getFileContext(editor: vscode.TextEditor): Promise<FileContext | void> {
         if (!editor) return;
 
         const gitExtension = vscode.extensions.getExtension('vscode.git');
@@ -90,5 +104,9 @@ export class ContextLensService {
             file_path: relativePath,
             remote_url: chosenRemote.fetchUrl,
         };
+    }
+
+    public dispose() {
+        this.cache.clear();
     }
 }
