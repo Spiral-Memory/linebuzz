@@ -108,14 +108,14 @@ export class ContextLensService {
             const range = new vscode.Range(lineIdx, textLine.firstNonWhitespaceCharacterIndex, lineIdx, textLine.firstNonWhitespaceCharacterIndex);
             decorations.push({
                 range,
-                hoverMessage: this.createMarkdownPopup(discussions)
+                hoverMessage: this.createMarkdownPopup(discussions, uri)
             });
         });
 
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
-    private createMarkdownPopup(discussions: CodeDiscussion[]): vscode.MarkdownString {
+    private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
         md.supportHtml = true;
@@ -127,7 +127,8 @@ export class ContextLensService {
         });
 
         const first = discussions[0];
-        const args = encodeURIComponent(JSON.stringify([first.commit_sha]));
+        const diffTarget = first.ref || first.commit_sha;
+        const args = encodeURIComponent(JSON.stringify([uri.toString(), diffTarget]));
         md.appendMarkdown(`---\n[$(git-compare) View History](command:clens.showDiff?${args})`);
 
         return md;

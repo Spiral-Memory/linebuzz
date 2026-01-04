@@ -9,18 +9,16 @@ import { SupabaseCodeRepository } from "./adapters/supabase/SupabaseCodeReposito
 import { TeamService } from "./core/services/TeamService";
 import { MessageService } from "./core/services/MessageService";
 import { SupabaseMessageRepository } from "./adapters/supabase/SupabaseMessageRepository";
-import { loginCommand } from "./core/commands/LoginCommand";
-import { createTeamCommand } from "./core/commands/CreateTeamCommand";
-import { sendMessageCommand } from "./core/commands/SendMessageCommand";
-import { joinTeamCommand } from "./core/commands/JoinTeamCommand";
-import { leaveTeamCommand } from "./core/commands/LeaveTeamCommand";
-import { captureSnippetCommand } from "./core/commands/CaptureSnippetCommand";
+import { loginCommand } from "./core/commands/AuthCommand";
+import { createTeamCommand, joinTeamCommand, leaveTeamCommand } from "./core/commands/TeamCommand";
+import { sendMessageCommand } from "./core/commands/MessageCommand";
+import { captureSnippetCommand } from "./core/commands/SnippetCommand";
 import { TeamFeedProvider } from "./core/providers/TeamFeedProvider";
 import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
-import { activateCLensCommand, deactivateCLensCommand } from "./core/commands/ToggleCLensCommand";
+import { activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -80,21 +78,12 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('linebuzz.activateCLens', () =>
                 activateCLensCommand(codeLensProvider)
             ),
-
             vscode.commands.registerCommand('linebuzz.deactivateCLens', () =>
                 deactivateCLensCommand(codeLensProvider)
             ),
-
-            vscode.commands.registerCommand("clens.openPeek", async (uri: vscode.Uri, line: number) => {
-                const editor = vscode.window.activeTextEditor;
-                if (editor && editor.document.uri.toString() === uri.toString()) {
-                    const textLine = editor.document.lineAt(line);
-                    const pos = new vscode.Position(line, textLine.firstNonWhitespaceCharacterIndex);
-                    editor.selection = new vscode.Selection(pos, pos);
-                    await vscode.commands.executeCommand("editor.action.showHover");
-                }
-            }
-            ));
+            vscode.commands.registerCommand("clens.openPeek", openPeekCommand),
+            vscode.commands.registerCommand("clens.showDiff", showDiffCommand)
+        );
 
     } catch (e) {
         logger.error("Extension", "Failed to activate extension:", e);
