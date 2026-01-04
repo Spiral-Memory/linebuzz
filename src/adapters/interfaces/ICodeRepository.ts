@@ -1,18 +1,11 @@
 import { Snippet } from "../../types/IAttachment";
+import { MessageResponse } from "../../types/IMessage";
 
-export interface CodeDiscussion extends Omit<Snippet, 'file_path' | 'remote_url'> {
+
+export interface CodeDiscussion extends Snippet {
     id: string;
-    message: {
-        id: string;
-        content: string;
-    },
-    u: {
-        user_id: string;
-        username: string;
-        display_name: string;
-        avatar_url: string;
-    };
     created_at: string;
+    message: Pick<MessageResponse, 'message_id' | 'content' | 'u'>;
 }
 
 export interface ICodeRepository {

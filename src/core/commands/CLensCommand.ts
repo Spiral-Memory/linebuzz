@@ -38,7 +38,9 @@ export const showDiffCommand = async (uriString: string, diffTarget: string) => 
         const rightUri = uri;
 
         const filename = uri.path.split('/').pop();
-        const title = `${filename} (${diffTarget} ⟷ Current)`;
+        const isFullSha = /^[0-9a-f]{40}$/i.test(diffTarget);
+        const displayLabel = isFullSha ? diffTarget.substring(0, 7) : diffTarget;
+        const title = `${filename} (${displayLabel} ⟷ Current)`;
         await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title);
     } catch (e) {
         logger.error("Extension", "Failed to show diff", e);
