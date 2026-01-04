@@ -57,18 +57,17 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(contextLensService);
         Container.register('ContextLensService', contextLensService);
 
-        const codeLensProvider = new CodeLensProvider(contextLensService);
-        context.subscriptions.push(
-            vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
-        );
-
-
         // const teamFeedPanelProvider = new TeamFeedProvider();
         // vscode.window.registerTreeDataProvider(TeamFeedProvider.viewId, teamFeedPanelProvider);
 
         const chatPanelProvider = new ChatPanelProvider(context.extensionUri);
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(ChatPanelProvider.viewId, chatPanelProvider)
+        );
+
+        const codeLensProvider = new CodeLensProvider(contextLensService);
+        context.subscriptions.push(
+            vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
         );
 
         context.subscriptions.push(

@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { formatDistanceToNow } from 'date-fns';
 import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
+import { Storage } from "../platform/storage";
 import { Container } from "./ServiceContainer";
 import { CodeDiscussion, ICodeRepository } from "../../adapters/interfaces/ICodeRepository";
 
@@ -29,7 +30,10 @@ export class ContextLensService {
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
             isWholeLine: false,
-        })
+        });
+        
+        this._isCLensActive = Storage.getGlobal<boolean>("clens.active") ?? false;
+        vscode.commands.executeCommand('setContext', 'linebuzz.isCLensActive', this._isCLensActive);
     }
 
     public toggleCodeLens(value: boolean) {
@@ -40,6 +44,7 @@ export class ContextLensService {
             });
         }
         this._isCLensActive = value;
+        Storage.setGlobal("clens.active", value);
     }
 
     public async getCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
