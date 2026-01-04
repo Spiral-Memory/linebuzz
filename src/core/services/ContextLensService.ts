@@ -31,7 +31,7 @@ export class ContextLensService {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
             isWholeLine: false,
         });
-        
+
         this._isCLensActive = Storage.getGlobal<boolean>("clens.active") ?? false;
         vscode.commands.executeCommand('setContext', 'linebuzz.isCLensActive', this._isCLensActive);
     }
@@ -104,8 +104,10 @@ export class ContextLensService {
 
         const decorations: vscode.DecorationOptions[] = [];
         threads.forEach((discussions, lineIdx) => {
+            const textLine = editor.document.lineAt(lineIdx);
+            const range = new vscode.Range(lineIdx, textLine.firstNonWhitespaceCharacterIndex, lineIdx, textLine.firstNonWhitespaceCharacterIndex);
             decorations.push({
-                range: new vscode.Range(lineIdx, 0, lineIdx, 0),
+                range,
                 hoverMessage: this.createMarkdownPopup(discussions)
             });
         });
@@ -173,5 +175,6 @@ export class ContextLensService {
 
     public dispose() {
         this.cache.clear();
+        this.buzzDecorationType.dispose();
     }
 }

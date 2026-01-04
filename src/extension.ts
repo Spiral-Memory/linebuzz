@@ -88,7 +88,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand("clens.openPeek", async (uri: vscode.Uri, line: number) => {
                 const editor = vscode.window.activeTextEditor;
                 if (editor && editor.document.uri.toString() === uri.toString()) {
-                    const pos = new vscode.Position(line, 0);
+                    const textLine = editor.document.lineAt(line);
+                    const pos = new vscode.Position(line, textLine.firstNonWhitespaceCharacterIndex);
                     editor.selection = new vscode.Selection(pos, pos);
                     await vscode.commands.executeCommand("editor.action.showHover");
                 }
