@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { logger } from '../utils/logger';
+import dedent from 'dedent';
 import { Container } from '../services/ServiceContainer';
 import { CodeLensProvider } from '../providers/CodeLensProvider';
+import { ReadOnlyContentProvider } from '../providers/ReadOnlyContentProvider';
 
 export const activateCLensCommand = async (codeLensProvider: CodeLensProvider) => {
     await vscode.commands.executeCommand('setContext', 'linebuzz.isCLensActive', true);
@@ -24,25 +26,47 @@ export const openPeekCommand = async (uri: vscode.Uri, line: number) => {
         await vscode.commands.executeCommand("editor.action.showHover");
     }
 };
-
-export const showDiffCommand = async (uriString: string, diffTarget: string) => {
+export const showDiffCommand = async (args: any) => {
     try {
-        const uri = vscode.Uri.parse(uriString);
-        const gitExtension = vscode.extensions.getExtension('vscode.git');
-        if (!gitExtension) {
-            logger.error("Extension", "Git extension not found");
+        const { originalContent, currentFileUri, startLine, endLine } = args;
+
+        if (!originalContent || !currentFileUri || startLine === undefined || endLine === undefined) {
+            logger.error("CLensCommand", "Missing arguments");
             return;
         }
-        const api = gitExtension.exports.getAPI(1);
-        const leftUri = api.toGitUri(uri, diffTarget);
-        const rightUri = uri;
+
+        const uri = vscode.Uri.parse(currentFileUri);
+        const doc = await vscode.workspace.openTextDocument(uri);
+
+        const startIdx = Math.max(0, startLine - 1);
+        const endIdx = Math.max(0, endLine - 1);
+        const safeStartIdx = Math.min(startIdx, doc.lineCount - 1);
+        const safeEndIdx = Math.min(endIdx, doc.lineCount - 1);
+
+        const range = new vscode.Range(
+            new vscode.Position(safeStartIdx, 0),
+            doc.lineAt(safeEndIdx).range.end
+        );
+
+        let currentContent: string;
+        try {
+            currentContent = dedent(doc.getText(range));
+        } catch (e) {
+            currentContent = doc.getText(range);
+        }
 
         const filename = uri.path.split('/').pop();
-        const isFullSha = /^[0-9a-f]{40}$/i.test(diffTarget);
-        const displayLabel = isFullSha ? diffTarget.substring(0, 7) : diffTarget;
-        const title = `${filename} (${displayLabel} ⟷ Current)`;
+        const leftTitle = `Snapshot`;
+        const rightTitle = `Current (L${startLine}-L${endLine})`;
+        const title = `${filename}: ${leftTitle} ↔ ${rightTitle}`;
+
+        const providerKey = encodeURIComponent(currentFileUri);
+        const leftUri = ReadOnlyContentProvider.registerContent(`original/${providerKey}`, originalContent);
+        const rightUri = ReadOnlyContentProvider.registerContent(`current/${providerKey}`, currentContent);
+
         await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title);
+
     } catch (e) {
-        logger.error("Extension", "Failed to show diff", e);
+        logger.error("CLensCommand", "Failed to show diff", e);
     }
 };

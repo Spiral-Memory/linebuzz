@@ -20,6 +20,7 @@ import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
 import { activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
+import { ReadOnlyContentProvider } from "./core/providers/ReadOnlyContentProvider";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -66,6 +67,10 @@ export async function activate(context: vscode.ExtensionContext) {
         const codeLensProvider = new CodeLensProvider(contextLensService);
         context.subscriptions.push(
             vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
+        );
+
+        context.subscriptions.push(
+            vscode.workspace.registerTextDocumentContentProvider(ReadOnlyContentProvider.scheme, new ReadOnlyContentProvider())
         );
 
         context.subscriptions.push(

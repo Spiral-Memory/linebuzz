@@ -9,6 +9,7 @@ import { Storage } from "../platform/storage";
 import { Container } from "./ServiceContainer";
 import { CodeDiscussion, ICodeRepository } from "../../adapters/interfaces/ICodeRepository";
 
+
 interface FileContext {
     file_path: string;
     remote_url: string;
@@ -116,19 +117,6 @@ export class ContextLensService {
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
-
-    private getRemoteWebUrl(remoteUrl: string, target: string, isCommit: boolean): string {
-        try {
-            const parsed = gitUrlParse(remoteUrl);
-            const baseUrl = `https://${parsed.resource}/${parsed.full_name}`;
-            return isCommit
-                ? `${baseUrl}/commit/${target}`
-                : `${baseUrl}/tree/${target}`;
-        } catch (e) {
-            return '';
-        }
-    }
-
     private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
@@ -159,35 +147,14 @@ export class ContextLensService {
                     md.appendMarkdown(`${content}\n\n`);
                 }
 
-                const commitSha = d.commit_sha;
-                const ref = d.ref;
-                const remoteUrl = d.remote_url;
-
-                const hasGitData = !!(commitSha || ref);
-
-                if (hasGitData) {
-                    const isCommit = !!commitSha;
-                    const targetValue = (commitSha || ref) as string;
-
-                    const icon = isCommit ? '$(git-commit)' : '$(git-branch)';
-                    const tooltip = isCommit ? 'Open commit' : 'Open branch';
-                    const displayLabel = isCommit ? commitSha.substring(0, 7) : ref;
-
-                    const webUrl = remoteUrl ? this.getRemoteWebUrl(remoteUrl, targetValue, isCommit) : '';
-
-                    if (webUrl) {
-                        md.appendMarkdown(`[${icon} ${displayLabel}](${webUrl} "${tooltip}")`);
-                    } else {
-                        md.appendMarkdown(`${icon} ${displayLabel}`);
-                    }
-                    const diffArgs = encodeURIComponent(JSON.stringify([uri.toString(), targetValue]));
-                    md.appendMarkdown(`&nbsp;&nbsp;`);
-                    md.appendMarkdown(`[$(copy)](command:clens.copySha?${diffArgs} "Copy SHA")`);
-                    md.appendMarkdown(`&nbsp;&nbsp;`);
-                    md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
-                    md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
-                }
-
+                const diffArgs = encodeURIComponent(JSON.stringify({
+                    originalContent: d.content,
+                    currentFileUri: uri.toString(),
+                    startLine: d.start_line,
+                    endLine: d.end_line
+                }));
+                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
+                md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
                 md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.noop "View Discussion")`);
 
                 if (i < discussions.length - 1) {
