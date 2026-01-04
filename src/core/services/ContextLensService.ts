@@ -155,7 +155,10 @@ private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vsc
             md.appendMarkdown('\n\n');
 
             if (d.message.content) {
-                md.appendMarkdown(`${d.message.content}\n\n`);
+                const content = d.message.content.length > 100 
+                    ? d.message.content.substring(0, 100) + '...'
+                    : d.message.content;
+                md.appendMarkdown(`${content}\n\n`);
             }
             
             const commitSha = d.commit_sha;
