@@ -117,93 +117,88 @@ export class ContextLensService {
     }
 
 
-private getRemoteWebUrl(remoteUrl: string, target: string, isCommit: boolean): string {
-    try {
-        const parsed = gitUrlParse(remoteUrl);
-        // git-url-parse provides clean base URLs (e.g. https://github.com/user/repo)
-        const baseUrl = `https://${parsed.resource}/${parsed.full_name}`;
-        
-        // Standard pattern for GitHub, GitLab, Bitbucket
-        return isCommit 
-            ? `${baseUrl}/commit/${target}` 
-            : `${baseUrl}/tree/${target}`;
-    } catch (e) {
-        return ''; 
-    }
-}
-
-private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
-    const md = new vscode.MarkdownString('', true);
-    md.isTrusted = true;
-    md.supportHtml = true;
-
-    discussions.forEach((d, i) => {
-        const timeAgo = formatDistanceToNow(new Date(d.created_at), { addSuffix: true });
-        const user = d.message.u;
-        const userName = user?.display_name || user?.username || 'User';
-        const avatarUrl = user?.avatar_url;
-
-        const avatarMd = avatarUrl 
-            ? `<img src="${avatarUrl}" height="30" style="border-radius: 4px; vertical-align: middle;">` 
-            : `$(account)`;
-
-        md.appendMarkdown(`${avatarMd}&nbsp;&nbsp;**${userName}**&nbsp;&nbsp;<span style="color:#808080;">$(history) ${timeAgo}</span>&nbsp;&nbsp;\n\n`);
-
-        if (d.content) {
-            const filename = path.basename(uri.fsPath);            
-            md.appendMarkdown(`[\`@${filename}:L${d.start_line}-L${d.end_line}\`](command:clens.highlightCode "Reveal code")`);
-            md.appendMarkdown('\n\n');
-
-            if (d.message.content) {
-                const content = d.message.content.length > 100 
-                    ? d.message.content.substring(0, 100) + '...'
-                    : d.message.content;
-                md.appendMarkdown(`${content}\n\n`);
-            }
-            
-            const commitSha = d.commit_sha;
-            const ref = d.ref;
-            const remoteUrl = d.remote_url;
-
-            const hasGitData = !!(commitSha || ref);
-
-            if (hasGitData) {
-                const isCommit = !!commitSha;
-                const targetValue = (commitSha || ref) as string;
-                
-                const icon = isCommit ? '$(git-commit)' : '$(git-branch)';
-                const tooltip = isCommit ? 'Open commit' : 'Open branch';
-                const displayLabel = isCommit ? commitSha.substring(0, 7) : ref;
-
-                const webUrl = remoteUrl ? this.getRemoteWebUrl(remoteUrl, targetValue, isCommit) : '';
-
-                if (webUrl) {
-                    md.appendMarkdown(`[${icon} ${displayLabel}](${webUrl} "${tooltip}")`);
-                } else {
-                    md.appendMarkdown(`${icon} ${displayLabel}`);
-                }
-                
-                md.appendMarkdown(`&nbsp;&nbsp;`);
-
-                const diffArgs = encodeURIComponent(JSON.stringify([uri.toString(), targetValue]));
-
-                md.appendMarkdown(`[$(copy)](command:clens.copySha?${diffArgs} "Copy SHA")`);
-                md.appendMarkdown(`&nbsp;&nbsp;`);
-                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
-                
-                md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
-            }
-
-            md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.noop "View Discussion")`);
-
-            if (i < discussions.length - 1) {
-                md.appendMarkdown('\n\n---\n\n');
-            }
+    private getRemoteWebUrl(remoteUrl: string, target: string, isCommit: boolean): string {
+        try {
+            const parsed = gitUrlParse(remoteUrl);
+            const baseUrl = `https://${parsed.resource}/${parsed.full_name}`;
+            return isCommit
+                ? `${baseUrl}/commit/${target}`
+                : `${baseUrl}/tree/${target}`;
+        } catch (e) {
+            return '';
         }
-    });
+    }
 
-    return md;
-}
+    private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
+        const md = new vscode.MarkdownString('', true);
+        md.isTrusted = true;
+        md.supportHtml = true;
+
+        discussions.forEach((d, i) => {
+            const timeAgo = formatDistanceToNow(new Date(d.created_at), { addSuffix: true });
+            const user = d.message.u;
+            const userName = user?.display_name || user?.username || 'User';
+            const avatarUrl = user?.avatar_url;
+
+            const avatarMd = avatarUrl
+                ? `<img src="${avatarUrl}" height="30" style="border-radius: 4px; vertical-align: middle;">`
+                : `$(account)`;
+
+            md.appendMarkdown(`\n`);
+            md.appendMarkdown(`${avatarMd}&nbsp;&nbsp;**${userName}**&nbsp;&nbsp;<span style="color:#808080;">$(history) ${timeAgo}</span>&nbsp;&nbsp;\n\n`);
+
+            if (d.content) {
+                const filename = path.basename(uri.fsPath);
+                md.appendMarkdown(`[\`@${filename}:L${d.start_line}-L${d.end_line}\`](command:clens.highlightCode "Reveal code")`);
+                md.appendMarkdown('\n\n');
+
+                if (d.message.content) {
+                    const content = d.message.content.length > 100
+                        ? d.message.content.substring(0, 100) + '...'
+                        : d.message.content;
+                    md.appendMarkdown(`${content}\n\n`);
+                }
+
+                const commitSha = d.commit_sha;
+                const ref = d.ref;
+                const remoteUrl = d.remote_url;
+
+                const hasGitData = !!(commitSha || ref);
+
+                if (hasGitData) {
+                    const isCommit = !!commitSha;
+                    const targetValue = (commitSha || ref) as string;
+
+                    const icon = isCommit ? '$(git-commit)' : '$(git-branch)';
+                    const tooltip = isCommit ? 'Open commit' : 'Open branch';
+                    const displayLabel = isCommit ? commitSha.substring(0, 7) : ref;
+
+                    const webUrl = remoteUrl ? this.getRemoteWebUrl(remoteUrl, targetValue, isCommit) : '';
+
+                    if (webUrl) {
+                        md.appendMarkdown(`[${icon} ${displayLabel}](${webUrl} "${tooltip}")`);
+                    } else {
+                        md.appendMarkdown(`${icon} ${displayLabel}`);
+                    }
+                    const diffArgs = encodeURIComponent(JSON.stringify([uri.toString(), targetValue]));
+                    md.appendMarkdown(`&nbsp;&nbsp;`);
+                    md.appendMarkdown(`[$(copy)](command:clens.copySha?${diffArgs} "Copy SHA")`);
+                    md.appendMarkdown(`&nbsp;&nbsp;`);
+                    md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
+                    md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
+                }
+
+                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.noop "View Discussion")`);
+
+                if (i < discussions.length - 1) {
+                    md.appendMarkdown('\n\n---\n\n');
+                }
+                md.appendMarkdown(`\n`);
+            }
+        });
+
+        return md;
+    }
 
     private async getFileContext(document: vscode.TextDocument): Promise<FileContext | void> {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
