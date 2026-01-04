@@ -24,7 +24,7 @@ export class SupabaseCodeRepository implements ICodeRepository {
         }
 
         if (response.status === 'success') {
-            logger.info("SupabaseCodeRepository", `Discussions retrieved successfully: ${response.discussions.length}`);
+            logger.info("SupabaseCodeRepository", `Discussions retrieved successfully: ${JSON.stringify(response.discussions)}`);
             return response.discussions;
         }
 

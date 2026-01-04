@@ -2,8 +2,17 @@ import { Snippet } from "../../types/IAttachment";
 
 export interface CodeDiscussion extends Omit<Snippet, 'file_path' | 'remote_url'> {
     id: string;
+    message: {
+        id: string;
+        content: string;
+    },
+    u: {
+        user_id: string;
+        username: string;
+        display_name: string;
+        avatar_url: string;
+    };
     created_at: string;
-    message_id: string;
 }
 
 export interface ICodeRepository {
