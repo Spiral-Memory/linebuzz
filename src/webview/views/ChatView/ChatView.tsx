@@ -31,6 +31,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const snapshotRef = useRef<{ id: string; offset: number } | null>(null);
     const isAtBottomRef = useRef(true);
     const isInitialLoadRef = useRef(true);
+    const oldestMessageOffsetRef = useRef(0);
 
     const FETCH_LIMIT = 50;
     const MAX_DOM_MESSAGE = 150;
@@ -43,7 +44,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             setUnreadCount(0);
         }
     };
-
 
     useLayoutEffect(() => {
         if (snapshotRef.current && messageListRef.current) {
@@ -84,7 +84,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         const observer = new IntersectionObserver(observerCallback, {
             root: messageListRef.current,
             rootMargin: '200px',
-
             threshold: 0.1
         });
 
@@ -118,7 +117,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
         } else if (hasMore) {
             setIsLoading(true);
-            const currentCacheSize = cachedMessagesRef.current.length;
+            const currentCacheSize = oldestMessageOffsetRef.current;
             captureSnapshot();
             vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, offset: currentCacheSize });
         }
@@ -141,6 +140,27 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         }
     };
 
+
+    const handleJumpToBottom = () => {
+        const cachedLen = cachedMessagesRef.current.length;
+        const currentLen = messages.length;
+        const lastCachedMsg = cachedMessagesRef.current[cachedLen - 1];
+        const lastRenderedMsg = messages[currentLen - 1];
+
+        if (lastCachedMsg && lastRenderedMsg && lastCachedMsg.message_id === lastRenderedMsg.message_id) {
+            scrollToBottom('smooth');
+            return;
+        }
+
+        if (cachedLen >= MAX_CACHED_MESSAGE) {
+            setIsLoading(true);
+            vscode.postMessage({ command: 'getMessages', limit: MAX_DOM_MESSAGE, offset: 0 });
+        } else {
+            const newSlice = cachedMessagesRef.current.slice(-MAX_DOM_MESSAGE);
+            setMessages(newSlice);
+            isInitialLoadRef.current = true;
+        }
+    };
 
     const onScroll = () => {
         if (!messageListRef.current) return;
@@ -169,6 +189,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     setHasMore(message.messages.length >= FETCH_LIMIT);
                     setIsLoading(false);
                     isInitialLoadRef.current = true;
+                    oldestMessageOffsetRef.current = message.messages.length;
 
                     break;
                 case 'prependMessages':
@@ -189,6 +210,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
                     setHasMore(newMessages.length >= FETCH_LIMIT);
                     setIsLoading(false);
+                    oldestMessageOffsetRef.current += newMessages.length;
                     break;
                 case 'appendMessage':
                     const msg = message.message;
@@ -207,6 +229,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         }
                         return next;
                     });
+
+                    oldestMessageOffsetRef.current += 1;
 
                     if (msg.userType === 'me') {
                         isAtBottomRef.current = true;
@@ -247,7 +271,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     <div ref={bottomSentinelRef} style={{ height: '20px', width: '100%' }} />
                     <div ref={messagesEndRef} />
                     {(unreadCount > 0 || showScrollButton) && (
-                        <div class={styles['new-messages-indicator']} onClick={() => scrollToBottom('smooth')}>
+                        <div class={styles['new-messages-indicator']} onClick={handleJumpToBottom}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M7 13L12 18L17 13M7 6L12 11L17 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
@@ -263,6 +287,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     onClearSnippet={onClearSnippet}
                     onRemoveSnippet={onRemoveSnippet}
                     onOpenSnippet={onOpenSnippet}
+                    jumpToBottom={handleJumpToBottom}
                 />
             </div>
         </div >
