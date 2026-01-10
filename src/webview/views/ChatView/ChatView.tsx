@@ -21,6 +21,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const [hasMore, setHasMore] = useState(true);
     const [offset, setOffset] = useState(0);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [showScrollButton, setShowScrollButton] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -28,8 +29,10 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const prevScrollHeightRef = useRef<number>(0);
     const isPrependingRef = useRef(false);
     const isAtBottomRef = useRef(true);
+    const isInitialLoadRef = useRef(true);
 
     const LIMIT = 50;
+    const SCROLL_THRESHOLD = 400;
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {
@@ -74,8 +77,16 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
         const { scrollTop, scrollHeight, clientHeight } = messageListRef.current;
 
-        const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const isAtBottom = distanceFromBottom < 50;
+
         isAtBottomRef.current = isAtBottom;
+
+        if (!isInitialLoadRef.current) {
+            setShowScrollButton(distanceFromBottom > SCROLL_THRESHOLD);
+        } else if (isAtBottom) {
+            isInitialLoadRef.current = false;
+        }
 
         if (isAtBottom && unreadCount > 0) {
             setUnreadCount(0);
@@ -144,15 +155,16 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         );
                     })}
                     <div ref={messagesEndRef} />
-                    {unreadCount > 0 && (
+                    {(unreadCount > 0 || showScrollButton) && (
                         <div class={styles['new-messages-indicator']} onClick={scrollToBottom}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M7 13L12 18L17 13M7 6L12 11L17 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <span class={styles['indicator-count']}>{unreadCount}</span>
+                            {unreadCount > 0 && <span class={styles['indicator-count']}>{unreadCount}</span>}
                         </div>
-                    )}
-                </div>
+                    )
+                    }
+                </div >
             )}
             <div class={styles['chat-input-container']}>
                 <ChatInput
@@ -162,6 +174,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     onOpenSnippet={onOpenSnippet}
                 />
             </div>
-        </div>
+        </div >
     );
 };
