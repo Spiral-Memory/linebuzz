@@ -20,7 +20,11 @@ export const MessageRow = ({ message, onOpenSnippet }: MessageRowProps) => {
     const isMe = message.userType === 'me';
 
     return (
-        <div class={`${styles['message-row']} ${isMe ? styles['message-row-me'] : ''}`} key={message.message_id}>
+        <div
+            class={`${styles['message-row']} ${isMe ? styles['message-row-me'] : ''}`}
+            key={message.message_id}
+            data-id={message.message_id}
+        >
             <div class={styles['avatar-container']}>
                 {avatarUrl ? (
                     <img
