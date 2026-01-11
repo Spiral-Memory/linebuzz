@@ -37,7 +37,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
     const FETCH_LIMIT = 50;
     const MAX_DOM_MESSAGE = 150;
-    const MAX_CACHED_MESSAGE = 200;
+    const MAX_CACHED_MESSAGE = 5000;
     const SCROLL_THRESHOLD = 400;
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
