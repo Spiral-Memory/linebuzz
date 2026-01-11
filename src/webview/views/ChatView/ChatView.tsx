@@ -15,6 +15,12 @@ interface ChatViewProps {
     onOpenSnippet?: (snippet: Snippet) => void;
 }
 
+interface ScrollSnapshot {
+    id: string;
+    rect: DOMRect;
+    scrollTop: number;
+}
+
 export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet }: ChatViewProps) => {
     const [messages, setMessages] = useState<MessageResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -28,16 +34,19 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const topSentinelRef = useRef<HTMLDivElement>(null);
     const bottomSentinelRef = useRef<HTMLDivElement>(null);
     const cachedMessagesRef = useRef<MessageResponse[]>([]);
-    const snapshotRef = useRef<{ id: string; offset: number } | null>(null);
+    const snapshotRef = useRef<ScrollSnapshot | null>(null);
     const isAtBottomRef = useRef(true);
     const isInitialLoadRef = useRef(true);
     const shouldScrollToBottomRef = useRef(false);
     const oldestMessageOffsetRef = useRef(0);
     const messagesRef = useRef<MessageResponse[]>([]);
+    const isLoadingRef = useRef(false);
+    const hasOlderRef = useRef(true);
+    const hasNewerRef = useRef(false);
 
     const FETCH_LIMIT = 50;
     const MAX_DOM_MESSAGE = 150;
-    const MAX_CACHED_MESSAGE = 5000;
+    const MAX_CACHED_MESSAGE = 200;
     const SCROLL_THRESHOLD = 400;
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -52,6 +61,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     };
 
     useLayoutEffect(() => {
+        if (messages.length === 0) return;
+
         if (shouldScrollToBottomRef.current) {
             snapshotRef.current = null;
             scrollToBottom('auto');
@@ -69,13 +80,13 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         }
 
         if (snapshotRef.current && messageListRef.current) {
-            const { id, offset } = snapshotRef.current;
+            const { id, rect: prevRect, scrollTop: prevScrollTop } = snapshotRef.current;
             const node = messageListRef.current.querySelector(`[data-id="${id}"]`) as HTMLElement;
 
             if (node) {
-                const currentOffset = node.offsetTop;
-                const scrollDiff = currentOffset - offset;
-                messageListRef.current.scrollTop += scrollDiff;
+                const currentRect = node.getBoundingClientRect();
+                const scrollDiff = currentRect.top - prevRect.top;
+                messageListRef.current.scrollTop = prevScrollTop + scrollDiff;
             }
             snapshotRef.current = null;
             return;
@@ -86,74 +97,60 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         messagesRef.current = messages;
     }, [messages]);
 
+    useEffect(() => {
+        isLoadingRef.current = isLoading;
+    }, [isLoading]);
 
     useEffect(() => {
-        const observerCallback = (entries: IntersectionObserverEntry[]) => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
+        hasOlderRef.current = hasOlder;
+    }, [hasOlder]);
 
-                if (isInitialLoadRef.current || shouldScrollToBottomRef.current) return;
-
-                if (entry.target === topSentinelRef.current && !isLoading) {
-                    handleLoadOlder();
-                } else if (entry.target === bottomSentinelRef.current) {
-                    handleLoadNewer();
-                }
-            });
-        };
-
-        const observer = new IntersectionObserver(observerCallback, {
-            root: messageListRef.current,
-            rootMargin: '200px',
-            threshold: 0.1
-        });
-
-        if (topSentinelRef.current) observer.observe(topSentinelRef.current);
-        if (bottomSentinelRef.current) observer.observe(bottomSentinelRef.current);
-
-        return () => observer.disconnect();
-    }, [messages, isLoading, hasOlder, hasNewer]);
+    useEffect(() => {
+        hasNewerRef.current = hasNewer;
+    }, [hasNewer]);
 
     const captureSnapshot = (targetMsg: MessageResponse) => {
-        if (!messageListRef.current) return;
+        if (!messageListRef.current || !targetMsg) return;
 
-        if (targetMsg) {
-            const node = messageListRef.current.querySelector(
-                `[data-id="${targetMsg.message_id}"]`
-            ) as HTMLElement;
+        const node = messageListRef.current.querySelector(
+            `[data-id="${targetMsg.message_id}"]`
+        ) as HTMLElement;
 
-            if (node) {
-                snapshotRef.current = {
-                    id: targetMsg.message_id,
-                    offset: node.offsetTop
-                };
-            }
+        if (node) {
+            snapshotRef.current = {
+                id: targetMsg.message_id,
+                rect: node.getBoundingClientRect(),
+                scrollTop: messageListRef.current.scrollTop
+            };
         }
     };
 
     const handleLoadOlder = () => {
-        if (isLoading) return;
-        const topMsgId = messages[0]?.message_id;
+        if (isLoadingRef.current) return;
+
+        const currentMessages = messagesRef.current;
+        const topMsgId = currentMessages[0]?.message_id;
         const cacheIndex = cachedMessagesRef.current.findIndex(m => m.message_id === topMsgId);
 
         if (cacheIndex > 0) {
             const newStartIndex = Math.max(0, cacheIndex - 20);
             const newSlice = cachedMessagesRef.current.slice(newStartIndex, newStartIndex + MAX_DOM_MESSAGE);
-            captureSnapshot(messages[0]);
+            captureSnapshot(currentMessages[0]);
             setMessages(newSlice);
 
-        } else if (hasOlder) {
+        } else if (hasOlderRef.current) {
             setIsLoading(true);
             const currentCacheSize = oldestMessageOffsetRef.current;
-            captureSnapshot(messages[0]);
+            captureSnapshot(currentMessages[0]);
             vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, offset: currentCacheSize, intent: 'paginate-older' });
         }
     };
 
     const handleLoadNewer = () => {
-        if (isLoading) return;
+        if (isLoadingRef.current) return;
 
-        const bottomMsgId = messages[messages.length - 1]?.message_id;
+        const currentMessages = messagesRef.current;
+        const bottomMsgId = currentMessages[currentMessages.length - 1]?.message_id;
         const cacheIndex = cachedMessagesRef.current.findIndex(m => m.message_id === bottomMsgId);
 
         if (cacheIndex !== -1 && cacheIndex < cachedMessagesRef.current.length - 1) {
@@ -164,7 +161,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             captureSnapshot(newSlice[0]);
             setMessages(newSlice);
 
-        } else if (hasNewer) {
+        } else if (hasNewerRef.current) {
             setIsLoading(true);
             const currentNewestOffset = Math.max(0, oldestMessageOffsetRef.current - cachedMessagesRef.current.length);
             const fetchOffset = Math.max(0, currentNewestOffset - FETCH_LIMIT);
@@ -173,24 +170,61 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         }
     };
 
+    const handleLoadOlderRef = useRef(handleLoadOlder);
+    const handleLoadNewerRef = useRef(handleLoadNewer);
+    handleLoadOlderRef.current = handleLoadOlder;
+    handleLoadNewerRef.current = handleLoadNewer;
+
+    useEffect(() => {
+        if (messages.length === 0) return;
+        if (!messageListRef.current || !topSentinelRef.current || !bottomSentinelRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries: IntersectionObserverEntry[]) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    if (isInitialLoadRef.current || shouldScrollToBottomRef.current) return;
+
+                    if (entry.target === topSentinelRef.current && !isLoadingRef.current) {
+                        handleLoadOlderRef.current();
+                    } else if (entry.target === bottomSentinelRef.current) {
+                        handleLoadNewerRef.current();
+                    }
+                });
+            },
+            {
+                root: messageListRef.current,
+                rootMargin: '400px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(topSentinelRef.current);
+        observer.observe(bottomSentinelRef.current);
+
+        return () => observer.disconnect();
+    }, [messages.length > 0]);
 
     const handleJumpToBottom = () => {
         const cachedLen = cachedMessagesRef.current.length;
-        const currentLen = messages.length;
+        const currentLen = messagesRef.current.length;
         const lastCachedMsg = cachedMessagesRef.current[cachedLen - 1];
-        const lastRenderedMsg = messages[currentLen - 1];
+        const lastRenderedMsg = messagesRef.current[currentLen - 1];
 
         if (lastCachedMsg && lastRenderedMsg && lastCachedMsg.message_id === lastRenderedMsg.message_id) {
             scrollToBottom('auto');
+            setUnreadCount(0);
             return;
         }
 
         if (cachedLen >= MAX_CACHED_MESSAGE) {
+            cachedMessagesRef.current = [];
+            oldestMessageOffsetRef.current = 0;
             vscode.postMessage({ command: 'getMessages', limit: MAX_DOM_MESSAGE, offset: 0, intent: 'jump' });
-
         } else {
             const newSlice = cachedMessagesRef.current.slice(-MAX_DOM_MESSAGE);
             shouldScrollToBottomRef.current = true;
+            setUnreadCount(0);
             setMessages(newSlice);
         }
     };
@@ -220,9 +254,9 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     setHasNewer(false);
                     setIsLoading(false);
                     oldestMessageOffsetRef.current = message.messages.length;
-                    isInitialLoadRef.current = true;
                     break;
-                case 'prependMessages':
+
+                case 'prependMessages': {
                     const olderMessages = message.messages;
                     const uniqueOlder = olderMessages.filter((newMsg: MessageResponse) =>
                         !cachedMessagesRef.current.some(existing => existing.message_id === newMsg.message_id)
@@ -239,9 +273,9 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         cachedMessagesRef.current = cachedMessagesRef.current.slice(0, MAX_CACHED_MESSAGE);
                         setHasNewer(true);
                     }
+
                     setMessages(prev => {
                         const combined = [...uniqueOlder, ...prev];
-
                         if (combined.length > MAX_DOM_MESSAGE) {
                             return combined.slice(0, MAX_DOM_MESSAGE);
                         }
@@ -252,7 +286,9 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     setIsLoading(false);
                     oldestMessageOffsetRef.current += uniqueOlder.length;
                     break;
-                case 'appendMessagesBatch':
+                }
+
+                case 'appendMessagesBatch': {
                     const newerMessages = message.messages;
                     const uniqueNewer = newerMessages.filter((newMsg: MessageResponse) =>
                         !cachedMessagesRef.current.some(existing => existing.message_id === newMsg.message_id)
@@ -266,23 +302,30 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     }
 
                     const lastVisibleMsg = messagesRef.current[messagesRef.current.length - 1];
-                    captureSnapshot(lastVisibleMsg);
+                    if (lastVisibleMsg && messageListRef.current) {
+                        const node = messageListRef.current.querySelector(
+                            `[data-id="${lastVisibleMsg.message_id}"]`
+                        ) as HTMLElement;
+                        if (node) {
+                            snapshotRef.current = {
+                                id: lastVisibleMsg.message_id,
+                                rect: node.getBoundingClientRect(),
+                                scrollTop: messageListRef.current.scrollTop
+                            };
+                        }
+                    }
 
                     cachedMessagesRef.current = [...cachedMessagesRef.current, ...uniqueNewer];
 
                     if (cachedMessagesRef.current.length > MAX_CACHED_MESSAGE) {
                         const removeCount = cachedMessagesRef.current.length - MAX_CACHED_MESSAGE;
                         cachedMessagesRef.current = cachedMessagesRef.current.slice(removeCount);
-
                         oldestMessageOffsetRef.current -= removeCount;
                         setHasOlder(true);
                     }
 
                     setMessages(prev => {
-                        const combined = [...prev, ...uniqueNewer].filter((msg, index, self) =>
-                            index === self.findIndex((m) => m.message_id === msg.message_id)
-                        );
-
+                        const combined = [...prev, ...uniqueNewer];
                         if (combined.length > MAX_DOM_MESSAGE) {
                             return combined.slice(-MAX_DOM_MESSAGE);
                         }
@@ -293,7 +336,9 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     setHasNewer(currentNewestOffset > 0);
                     setIsLoading(false);
                     break;
-                case 'appendMessage':
+                }
+
+                case 'appendMessage': {
                     const msg = message.message;
                     if (cachedMessagesRef.current.some(m => m.message_id === msg.message_id)) {
                         return;
@@ -305,28 +350,35 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         setHasOlder(true);
                     }
 
-                    setMessages(prev => {
-                        const next = [...prev, msg];
-                        if (next.length > MAX_DOM_MESSAGE) {
-                            if (isAtBottomRef.current) {
+                    if (isAtBottomRef.current) {
+                        setMessages(prev => {
+                            const next = [...prev, msg];
+                            if (next.length > MAX_DOM_MESSAGE) {
                                 return next.slice(-MAX_DOM_MESSAGE);
                             }
-                            return next.slice(-MAX_DOM_MESSAGE);
-                        }
-                        return next;
-                    });
+                            return next;
+                        });
+                        shouldScrollToBottomRef.current = true;
+                    } else {
+                        setUnreadCount(prev => prev + 1);
+                    }
 
                     oldestMessageOffsetRef.current += 1;
 
                     if (msg.userType === 'me') {
                         isAtBottomRef.current = true;
-                        shouldScrollToBottomRef.current = true;
-                    } else if (!isAtBottomRef.current) {
-                        setUnreadCount(prev => prev + 1);
-                    } else {
+                        setMessages(prev => {
+                            if (prev.some(m => m.message_id === msg.message_id)) return prev;
+                            const next = [...prev, msg];
+                            if (next.length > MAX_DOM_MESSAGE) {
+                                return next.slice(-MAX_DOM_MESSAGE);
+                            }
+                            return next;
+                        });
                         shouldScrollToBottomRef.current = true;
                     }
                     break;
+                }
 
                 case 'jumpToAnchor':
                     cachedMessagesRef.current = message.messages;
@@ -342,8 +394,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     setIsLoading(false);
                     oldestMessageOffsetRef.current = message.messages.length;
                     shouldScrollToBottomRef.current = true;
+                    setUnreadCount(0);
                     break;
-
             }
         };
 
@@ -363,18 +415,16 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                 </div>
             ) : (
                 <div class={styles['message-list']} ref={messageListRef} onScroll={onScroll}>
-                    <div ref={topSentinelRef} style={{ height: '20px', width: '100%' }} />
+                    <div ref={topSentinelRef} style={{ height: '40px', width: '100%' }} />
                     {isLoading && <LoadingSpinner />}
-                    {messages.map((msg) => {
-                        return (
-                            <MessageRow
-                                message={msg}
-                                key={msg.message_id}
-                                onOpenSnippet={onOpenSnippet}
-                            />
-                        );
-                    })}
-                    <div ref={bottomSentinelRef} style={{ height: '20px', width: '100%' }} />
+                    {messages.map((msg) => (
+                        <MessageRow
+                            message={msg}
+                            key={msg.message_id}
+                            onOpenSnippet={onOpenSnippet}
+                        />
+                    ))}
+                    <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
                     <div ref={messagesEndRef} />
                     {(unreadCount > 0 || showScrollButton) && (
                         <div class={styles['new-messages-indicator']} onClick={handleJumpToBottom}>
@@ -383,9 +433,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                             </svg>
                             {unreadCount > 0 && <span class={styles['indicator-count']}>{unreadCount}</span>}
                         </div>
-                    )
-                    }
-                </div >
+                    )}
+                </div>
             )}
             <div class={styles['chat-input-container']}>
                 <ChatInput
@@ -396,6 +445,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     jumpToBottom={handleJumpToBottom}
                 />
             </div>
-        </div >
+        </div>
     );
 };
