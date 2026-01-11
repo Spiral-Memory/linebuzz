@@ -63,7 +63,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 this.navigatorService.openSnippet(data.snippet);
                 break;
             }
-            
+
             case 'sendMessage': {
                 try {
                     const MessageResponse = await this.messageService.sendMessage(data.body);
@@ -82,13 +82,31 @@ export class ChatPanelProvider extends BaseWebviewProvider {
 
             case 'getMessages': {
                 try {
-                    const { limit, offset } = data;
+                    const { limit, offset, intent } = data;
                     const messages = await this.messageService.getMessages(limit, offset);
 
-                    this._view?.webview.postMessage({
-                        command: offset && offset > 0 ? 'prependMessages' : 'loadInitialMessages',
-                        messages: messages
-                    });
+                    let command: string | null = null;
+                    switch (intent) {
+                        case 'initial':
+                            command = 'loadInitialMessages';
+                            break;
+                        case 'jump':
+                            command = 'jumpToAnchor';
+                            break;
+                        case 'paginate-newer':
+                            command = 'appendMessagesBatch';
+                            break;
+                        case 'paginate-older':
+                            command = 'prependMessages';
+                            break;
+                    }
+
+                    if (command) {
+                        this._view?.webview.postMessage({
+                            command: command,
+                            messages: messages
+                        });
+                    }
 
                     if (this._subscription) {
                         this._subscription.unsubscribe();
