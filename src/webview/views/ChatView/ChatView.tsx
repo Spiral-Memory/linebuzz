@@ -344,29 +344,26 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         return;
                     }
 
-                    cachedMessagesRef.current = [...cachedMessagesRef.current, msg];
-                    if (cachedMessagesRef.current.length > MAX_CACHED_MESSAGE) {
-                        cachedMessagesRef.current = cachedMessagesRef.current.slice(-MAX_CACHED_MESSAGE);
+                    let newCache = [...cachedMessagesRef.current, msg];
+                    let didPrune = false;
+                    let prunedMsg: MessageResponse | undefined;
+
+                    if (newCache.length > MAX_CACHED_MESSAGE) {
+                        prunedMsg = newCache[0];
+                        newCache = newCache.slice(-MAX_CACHED_MESSAGE);
                         setHasOlder(true);
+                        didPrune = true;
                     }
 
-                    if (isAtBottomRef.current) {
-                        setMessages(prev => {
-                            const next = [...prev, msg];
-                            if (next.length > MAX_DOM_MESSAGE) {
-                                return next.slice(-MAX_DOM_MESSAGE);
-                            }
-                            return next;
-                        });
-                        shouldScrollToBottomRef.current = true;
-                    } else {
-                        setUnreadCount(prev => prev + 1);
+                    cachedMessagesRef.current = newCache;
+                    if (!didPrune) {
+                        oldestMessageOffsetRef.current += 1;
                     }
 
-                    oldestMessageOffsetRef.current += 1;
+                    const isAtBottom = isAtBottomRef.current;
+                    const isMyMessage = msg.userType === 'me';
 
-                    if (msg.userType === 'me') {
-                        isAtBottomRef.current = true;
+                    if (isAtBottom || isMyMessage) {
                         setMessages(prev => {
                             if (prev.some(m => m.message_id === msg.message_id)) return prev;
                             const next = [...prev, msg];
@@ -376,6 +373,20 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                             return next;
                         });
                         shouldScrollToBottomRef.current = true;
+                        isAtBottomRef.current = true;
+                    } else {
+                        setUnreadCount(prev => prev + 1);
+                        if (didPrune && prunedMsg) {
+                            const currentView = messagesRef.current;
+                            if (currentView.length > 0 && currentView[0].message_id === prunedMsg.message_id) {
+                                if (currentView.length > 1) {
+                                    captureSnapshot(currentView[1]);
+                                    setMessages(prev => prev.filter(m => m.message_id !== prunedMsg!.message_id));
+                                } else {
+                                    setMessages([]);
+                                }
+                            }
+                        }
                     }
                     break;
                 }
