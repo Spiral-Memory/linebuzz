@@ -46,7 +46,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
     const FETCH_LIMIT = 50;
     const MAX_DOM_MESSAGE = 150;
-    const MAX_CACHED_MESSAGE = 200;
     const SCROLL_THRESHOLD = 400;
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -157,7 +156,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             const newEndIndex = Math.min(cachedMessagesRef.current.length, cacheIndex + 21);
             const newStartIndex = Math.max(0, newEndIndex - MAX_DOM_MESSAGE);
             const newSlice = cachedMessagesRef.current.slice(newStartIndex, newEndIndex);
-
             captureSnapshot(newSlice[0]);
             setMessages(newSlice);
 
@@ -165,7 +163,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             setIsLoading(true);
             const currentNewestOffset = Math.max(0, oldestMessageOffsetRef.current - cachedMessagesRef.current.length);
             const fetchOffset = Math.max(0, currentNewestOffset - FETCH_LIMIT);
-
             vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, offset: fetchOffset, intent: 'paginate-newer' });
         }
     };
@@ -194,7 +191,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             },
             {
                 root: messageListRef.current,
-                rootMargin: '400px',
+                rootMargin: '10px',
                 threshold: 0.1
             }
         );
@@ -217,16 +214,10 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             return;
         }
 
-        if (cachedLen >= MAX_CACHED_MESSAGE) {
-            cachedMessagesRef.current = [];
-            oldestMessageOffsetRef.current = 0;
-            vscode.postMessage({ command: 'getMessages', limit: MAX_DOM_MESSAGE, offset: 0, intent: 'jump' });
-        } else {
-            const newSlice = cachedMessagesRef.current.slice(-MAX_DOM_MESSAGE);
-            shouldScrollToBottomRef.current = true;
-            setUnreadCount(0);
-            setMessages(newSlice);
-        }
+        const newSlice = cachedMessagesRef.current.slice(-MAX_DOM_MESSAGE);
+        shouldScrollToBottomRef.current = true;
+        setUnreadCount(0);
+        setMessages(newSlice);
     };
 
     const onScroll = () => {
@@ -269,10 +260,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     }
 
                     cachedMessagesRef.current = [...uniqueOlder, ...cachedMessagesRef.current];
-                    if (cachedMessagesRef.current.length > MAX_CACHED_MESSAGE) {
-                        cachedMessagesRef.current = cachedMessagesRef.current.slice(0, MAX_CACHED_MESSAGE);
-                        setHasNewer(true);
-                    }
 
                     setMessages(prev => {
                         const combined = [...uniqueOlder, ...prev];
@@ -317,13 +304,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
                     cachedMessagesRef.current = [...cachedMessagesRef.current, ...uniqueNewer];
 
-                    if (cachedMessagesRef.current.length > MAX_CACHED_MESSAGE) {
-                        const removeCount = cachedMessagesRef.current.length - MAX_CACHED_MESSAGE;
-                        cachedMessagesRef.current = cachedMessagesRef.current.slice(removeCount);
-                        oldestMessageOffsetRef.current -= removeCount;
-                        setHasOlder(true);
-                    }
-
                     setMessages(prev => {
                         const combined = [...prev, ...uniqueNewer];
                         if (combined.length > MAX_DOM_MESSAGE) {
@@ -344,21 +324,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         return;
                     }
 
-                    let newCache = [...cachedMessagesRef.current, msg];
-                    let didPrune = false;
-                    let prunedMsg: MessageResponse | undefined;
-
-                    if (newCache.length > MAX_CACHED_MESSAGE) {
-                        prunedMsg = newCache[0];
-                        newCache = newCache.slice(-MAX_CACHED_MESSAGE);
-                        setHasOlder(true);
-                        didPrune = true;
-                    }
-
-                    cachedMessagesRef.current = newCache;
-                    if (!didPrune) {
-                        oldestMessageOffsetRef.current += 1;
-                    }
+                    cachedMessagesRef.current = [...cachedMessagesRef.current, msg];
+                    oldestMessageOffsetRef.current += 1;
 
                     const isAtBottom = isAtBottomRef.current;
                     const isMyMessage = msg.userType === 'me';
@@ -376,17 +343,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         isAtBottomRef.current = true;
                     } else {
                         setUnreadCount(prev => prev + 1);
-                        if (didPrune && prunedMsg) {
-                            const currentView = messagesRef.current;
-                            if (currentView.length > 0 && currentView[0].message_id === prunedMsg.message_id) {
-                                if (currentView.length > 1) {
-                                    captureSnapshot(currentView[1]);
-                                    setMessages(prev => prev.filter(m => m.message_id !== prunedMsg!.message_id));
-                                } else {
-                                    setMessages([]);
-                                }
-                            }
-                        }
                     }
                     break;
                 }
