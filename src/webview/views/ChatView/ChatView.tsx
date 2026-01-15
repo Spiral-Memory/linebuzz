@@ -66,8 +66,12 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
         if (shouldScrollToBottomRef.current) {
             snapshotRef.current = null;
-            scrollToBottom('auto');
-            shouldScrollToBottomRef.current = false;
+
+            requestAnimationFrame(() => {
+                scrollToBottom('auto');
+                shouldScrollToBottomRef.current = false;
+            });
+
             return;
         }
 
@@ -85,21 +89,32 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             const node = messageListRef.current.querySelector(`[data-id="${id}"]`) as HTMLElement;
 
             if (node && prevRect) {
-                const currentRect = node.getBoundingClientRect();
-                const scrollDiff = currentRect.top - prevRect.top;
-                messageListRef.current.scrollTop = prevScrollTop + scrollDiff;
+
+                requestAnimationFrame(() => {
+                    const currentRect = node.getBoundingClientRect();
+                    const scrollDiff = currentRect.top - prevRect.top;
+                    if (messageListRef.current) {
+                        messageListRef.current.scrollTop = prevScrollTop + scrollDiff;
+                    }
+                });
+
             }
             snapshotRef.current = null;
             return;
         }
 
         if (jumpRequestRef.current && messageListRef.current) {
-            const node = messageListRef.current.querySelector(`[data-id="${jumpRequestRef.current}"]`);
-            if (node) {
-                node.scrollIntoView({ block: 'center', behavior: 'auto' });
-                setHighlightedMessageId(jumpRequestRef.current);
-                jumpRequestRef.current = null;
-            }
+            const targetId = jumpRequestRef.current;
+            jumpRequestRef.current = null;
+
+            requestAnimationFrame(() => {
+                const node = messageListRef.current?.querySelector(`[data-id="${targetId}"]`);
+                if (node) {
+                    node.scrollIntoView({ block: 'center', behavior: 'auto' });
+                    setHighlightedMessageId(targetId);
+                }
+            });
+
         }
     }, [messages]);
 
@@ -452,19 +467,21 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     <WelcomeSplash />
                 </div>
             ) : (
-                <div class={styles['message-list']} ref={messageListRef} onScroll={onScroll}>
-                    <div ref={topSentinelRef} style={{ height: '40px', width: '100%' }} />
-                    {isLoading && <LoadingSpinner />}
-                    {messages.map((msg) => (
-                        <MessageRow
-                            message={msg}
-                            key={msg.message_id}
-                            onOpenSnippet={onOpenSnippet}
-                            isHighlighted={msg.message_id === highlightedMessageId}
-                        />
-                    ))}
-                    <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
-                    <div ref={messagesEndRef} />
+                <>
+                    <div class={styles['message-list']} ref={messageListRef} onScroll={onScroll}>
+                        <div ref={topSentinelRef} style={{ height: '40px', width: '100%' }} />
+                        {isLoading && <LoadingSpinner />}
+                        {messages.map((msg) => (
+                            <MessageRow
+                                message={msg}
+                                key={msg.message_id}
+                                onOpenSnippet={onOpenSnippet}
+                                isHighlighted={msg.message_id === highlightedMessageId}
+                            />
+                        ))}
+                        <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
+                        <div ref={messagesEndRef} />
+                    </div>
                     {(unreadCount > 0 || showScrollButton) && (
                         <div class={styles['new-messages-indicator']} onClick={handleJumpToBottom}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -473,7 +490,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                             {unreadCount > 0 && <span class={styles['indicator-count']}>{unreadCount}</span>}
                         </div>
                     )}
-                </div>
+                </>
             )}
             <div class={styles['chat-input-container']}>
                 <ChatInput
