@@ -90,7 +90,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                         case 'initial':
                             command = 'loadInitialMessages';
                             break;
-                        case 'jump':
+                        case 'jump-to-bottom':
                             command = 'jumpToBottom';
                             break;
                         case 'paginate-newer':
@@ -99,12 +99,16 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                         case 'paginate-older':
                             command = 'prependMessages';
                             break;
+                        case 'jump-to-message':
+                            command = 'jumpToMessage';
+                            break;
                     }
 
                     if (command) {
                         this._view?.webview.postMessage({
                             command: command,
-                            messages: messages
+                            messages: messages,
+                            targetId: anchorId
                         });
                     }
 
@@ -140,6 +144,17 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 }
                 break;
         }
+    }
+
+    public async jumpToMessage(messageId: string) {
+        if (!this._view) {
+            await vscode.commands.executeCommand('linebuzz.chatpanel.focus');
+        }
+
+        this._view?.webview.postMessage({
+            command: 'jumpToMessage',
+            targetId: messageId
+        });
     }
 
     private async updateIdentity() {

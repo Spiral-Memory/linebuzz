@@ -43,6 +43,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const isLoadingRef = useRef(false);
     const hasOlderRef = useRef(true);
     const hasNewerRef = useRef(false);
+    const jumpRequestRef = useRef<string | null>(null);
 
     const FETCH_LIMIT = 50;
     const MAX_DOM_MESSAGE = 150;
@@ -82,13 +83,21 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             const { id, rect: prevRect, scrollTop: prevScrollTop } = snapshotRef.current;
             const node = messageListRef.current.querySelector(`[data-id="${id}"]`) as HTMLElement;
 
-            if (node) {
+            if (node && prevRect) {
                 const currentRect = node.getBoundingClientRect();
                 const scrollDiff = currentRect.top - prevRect.top;
                 messageListRef.current.scrollTop = prevScrollTop + scrollDiff;
             }
             snapshotRef.current = null;
             return;
+        }
+
+        if (jumpRequestRef.current && messageListRef.current) {
+            const node = messageListRef.current.querySelector(`[data-id="${jumpRequestRef.current}"]`);
+            if (node) {
+                node.scrollIntoView({ block: 'center', behavior: 'auto' });
+                jumpRequestRef.current = null;
+            }
         }
     }, [messages]);
 
@@ -214,6 +223,12 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     }, [messages.length > 0]);
 
     const handleJumpToBottom = () => {
+        if (hasNewer) {
+            setIsLoading(true);
+            vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, intent: 'jump-to-bottom' });
+            return;
+        }
+
         const cachedLen = cachedMessagesRef.current.length;
         const currentLen = messagesRef.current.length;
         const lastCachedMsg = cachedMessagesRef.current[cachedLen - 1];
@@ -357,10 +372,49 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     cachedMessagesRef.current = message.messages;
                     setMessages(message.messages.slice(-MAX_DOM_MESSAGE));
                     setHasOlder(message.messages.length >= FETCH_LIMIT);
-                    setHasNewer(true);
+                    setHasNewer(false);
                     setIsLoading(false);
                     shouldScrollToBottomRef.current = true;
                     setUnreadCount(0);
+                    break;
+                }
+
+                case 'jumpToMessage': {
+                    if (message.messages) {
+                        cachedMessagesRef.current = message.messages;
+                        setMessages(message.messages);
+                        setHasOlder(true);
+                        setHasNewer(true);
+                        setIsLoading(false);
+                        setUnreadCount(0);
+                        jumpRequestRef.current = message.targetId;
+                        return;
+                    }
+
+                    const targetId = message.targetId;
+                    const cacheIndex = cachedMessagesRef.current.findIndex(m => m.message_id === targetId);
+
+                    if (cacheIndex !== -1) {
+                        const half = Math.floor(MAX_DOM_MESSAGE / 2);
+                        const start = Math.max(0, cacheIndex - half);
+                        const end = Math.min(cachedMessagesRef.current.length, start + MAX_DOM_MESSAGE);
+                        const newSlice = cachedMessagesRef.current.slice(start, end);
+
+                        setMessages(newSlice);
+                        setHasOlder(true);
+                        setHasNewer(true);
+                        setUnreadCount(0);
+                        jumpRequestRef.current = targetId;
+                    } else {
+                        setIsLoading(true);
+                        vscode.postMessage({
+                            command: 'getMessages',
+                            limit: FETCH_LIMIT,
+                            anchorId: targetId,
+                            direction: 'around',
+                            intent: 'jump-to-message'
+                        });
+                    }
                     break;
                 }
             }

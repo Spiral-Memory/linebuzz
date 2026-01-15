@@ -155,7 +155,7 @@ export class ContextLensService {
                 }));
                 md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
-                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.noop "View Discussion")`);
+                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.message.message_id))} "View Discussion")`);
 
                 if (i < discussions.length - 1) {
                     md.appendMarkdown('\n\n---\n\n');

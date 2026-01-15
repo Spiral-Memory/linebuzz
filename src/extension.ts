@@ -87,7 +87,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 deactivateCLensCommand(codeLensProvider)
             ),
             vscode.commands.registerCommand("clens.openPeek", openPeekCommand),
-            vscode.commands.registerCommand("clens.showDiff", showDiffCommand)
+            vscode.commands.registerCommand("clens.showDiff", showDiffCommand),
+            vscode.commands.registerCommand("linebuzz.jumpToMessage", (messageId: string) =>
+                chatPanelProvider.jumpToMessage(messageId)
+            )
         );
 
     } catch (e) {
