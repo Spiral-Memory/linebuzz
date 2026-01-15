@@ -2,7 +2,7 @@
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    padding: 4px 0;
+    padding: 4px;
 }
 
 .avatar-container {
@@ -79,5 +79,19 @@
     flex-direction: column;
     gap: 8px;
     margin-top: 8px;
-    width: 100%;
+}
+
+@keyframes fadeOut {
+    0% {
+        background-color: var(--vscode-editor-rangeHighlightBackground);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.message-row-highlighted {
+    animation: fadeOut 2s forwards;
+    border-radius: 4px;
 }

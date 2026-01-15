@@ -28,6 +28,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const [hasNewer, setHasNewer] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showScrollButton, setShowScrollButton] = useState(false);
+    const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageListRef = useRef<HTMLDivElement>(null);
@@ -96,10 +97,20 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             const node = messageListRef.current.querySelector(`[data-id="${jumpRequestRef.current}"]`);
             if (node) {
                 node.scrollIntoView({ block: 'center', behavior: 'auto' });
+                setHighlightedMessageId(jumpRequestRef.current);
                 jumpRequestRef.current = null;
             }
         }
     }, [messages]);
+
+    useEffect(() => {
+        if (highlightedMessageId) {
+            const timer = setTimeout(() => {
+                setHighlightedMessageId(null);
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [highlightedMessageId]);
 
     useEffect(() => {
         messagesRef.current = messages;
@@ -449,6 +460,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                             message={msg}
                             key={msg.message_id}
                             onOpenSnippet={onOpenSnippet}
+                            isHighlighted={msg.message_id === highlightedMessageId}
                         />
                     ))}
                     <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
