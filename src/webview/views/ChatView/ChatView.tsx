@@ -346,10 +346,16 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         return;
                     }
 
-                    cachedMessagesRef.current = [...cachedMessagesRef.current, msg];
-
                     const isAtBottom = isAtBottomRef.current;
                     const isMyMessage = msg.userType === 'me';
+
+                    if (isMyMessage && hasNewerRef.current) {
+                        setIsLoading(true);
+                        vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, intent: 'jump-to-bottom' });
+                        return;
+                    }
+
+                    cachedMessagesRef.current = [...cachedMessagesRef.current, msg];
 
                     if (isAtBottom || isMyMessage) {
                         setMessages(prev => {

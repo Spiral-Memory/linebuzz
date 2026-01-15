@@ -66,10 +66,6 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
             textareaRef.current.style.overflowY = 'hidden';
             textareaRef.current.focus();
         }
-
-        if (jumpToBottom) {
-            jumpToBottom();
-        }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
