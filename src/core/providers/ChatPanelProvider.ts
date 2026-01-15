@@ -82,8 +82,8 @@ export class ChatPanelProvider extends BaseWebviewProvider {
 
             case 'getMessages': {
                 try {
-                    const { limit, offset, intent } = data;
-                    const messages = await this.messageService.getMessages(limit, offset);
+                    const { limit, anchorId, direction, intent } = data;
+                    const messages = await this.messageService.getMessages(limit, anchorId, direction);
 
                     let command: string | null = null;
                     switch (intent) {
@@ -91,7 +91,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                             command = 'loadInitialMessages';
                             break;
                         case 'jump':
-                            command = 'jumpToAnchor';
+                            command = 'jumpToBottom';
                             break;
                         case 'paginate-newer':
                             command = 'appendMessagesBatch';

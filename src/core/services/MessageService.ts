@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { IMessageRepository } from "../../adapters/interfaces/IMessageRepository";
 import { logger } from "../utils/logger";
 import { Container } from "./ServiceContainer";
-import { MessageResponse, MessageRequest} from "../../types/IMessage";
+import { MessageResponse, MessageRequest } from "../../types/IMessage";
 
 export class MessageService {
     constructor(private messageRepo: IMessageRepository) { }
@@ -30,7 +30,7 @@ export class MessageService {
     }
 
 
-    public async getMessages(limit?: number, offset?: number): Promise<MessageResponse[]> {
+    public async getMessages(limit?: number, anchorId?: string, direction?: 'before' | 'after' | 'around'): Promise<MessageResponse[]> {
         try {
             const teamService = Container.get("TeamService");
             const currentTeam = teamService.getTeam();
@@ -42,7 +42,7 @@ export class MessageService {
 
             const authService = Container.get("AuthService");
             const [messages, session] = await Promise.all([
-                this.messageRepo.getMessages(currentTeam.id, limit, offset),
+                this.messageRepo.getMessages(currentTeam.id, limit, anchorId, direction),
                 authService.getSession()
             ]);
 

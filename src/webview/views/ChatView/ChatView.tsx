@@ -38,7 +38,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const isAtBottomRef = useRef(true);
     const isInitialLoadRef = useRef(true);
     const shouldScrollToBottomRef = useRef(false);
-    const oldestMessageOffsetRef = useRef(0);
+
     const messagesRef = useRef<MessageResponse[]>([]);
     const isLoadingRef = useRef(false);
     const hasOlderRef = useRef(true);
@@ -139,9 +139,15 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
         } else if (hasOlderRef.current) {
             setIsLoading(true);
-            const currentCacheSize = oldestMessageOffsetRef.current;
+            const topMsgId = currentMessages[0]?.message_id;
             captureSnapshot(currentMessages[0]);
-            vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, offset: currentCacheSize, intent: 'paginate-older' });
+            vscode.postMessage({
+                command: 'getMessages',
+                limit: FETCH_LIMIT,
+                anchorId: topMsgId,
+                direction: 'before',
+                intent: 'paginate-older'
+            });
         }
     };
 
@@ -161,9 +167,14 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
         } else if (hasNewerRef.current) {
             setIsLoading(true);
-            const currentNewestOffset = Math.max(0, oldestMessageOffsetRef.current - cachedMessagesRef.current.length);
-            const fetchOffset = Math.max(0, currentNewestOffset - FETCH_LIMIT);
-            vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, offset: fetchOffset, intent: 'paginate-newer' });
+            const bottomMsgId = currentMessages[currentMessages.length - 1]?.message_id;
+            vscode.postMessage({
+                command: 'getMessages',
+                limit: FETCH_LIMIT,
+                anchorId: bottomMsgId,
+                direction: 'after',
+                intent: 'paginate-newer'
+            });
         }
     };
 
@@ -244,7 +255,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     setHasOlder(message.messages.length >= FETCH_LIMIT);
                     setHasNewer(false);
                     setIsLoading(false);
-                    oldestMessageOffsetRef.current = message.messages.length;
                     break;
 
                 case 'prependMessages': {
@@ -271,7 +281,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
                     setHasOlder(olderMessages.length >= FETCH_LIMIT);
                     setIsLoading(false);
-                    oldestMessageOffsetRef.current += uniqueOlder.length;
                     break;
                 }
 
@@ -283,8 +292,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
                     if (uniqueNewer.length === 0) {
                         setIsLoading(false);
-                        const currentNewestOffset = Math.max(0, oldestMessageOffsetRef.current - cachedMessagesRef.current.length);
-                        setHasNewer(currentNewestOffset > 0);
+                        setHasNewer(false);
                         break;
                     }
 
@@ -312,8 +320,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         return combined;
                     });
 
-                    const currentNewestOffset = Math.max(0, oldestMessageOffsetRef.current - cachedMessagesRef.current.length);
-                    setHasNewer(currentNewestOffset > 0);
+                    setHasNewer(newerMessages.length >= FETCH_LIMIT);
                     setIsLoading(false);
                     break;
                 }
@@ -325,7 +332,6 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     }
 
                     cachedMessagesRef.current = [...cachedMessagesRef.current, msg];
-                    oldestMessageOffsetRef.current += 1;
 
                     const isAtBottom = isAtBottomRef.current;
                     const isMyMessage = msg.userType === 'me';
@@ -347,27 +353,21 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     break;
                 }
 
-                case 'jumpToAnchor':
+                case 'jumpToBottom': {
                     cachedMessagesRef.current = message.messages;
                     setMessages(message.messages.slice(-MAX_DOM_MESSAGE));
-
                     setHasOlder(message.messages.length >= FETCH_LIMIT);
-                    const newestOffset = Math.max(
-                        0,
-                        oldestMessageOffsetRef.current - message.messages.length
-                    );
-                    setHasNewer(newestOffset > 0);
-
+                    setHasNewer(true);
                     setIsLoading(false);
-                    oldestMessageOffsetRef.current = message.messages.length;
                     shouldScrollToBottomRef.current = true;
                     setUnreadCount(0);
                     break;
+                }
             }
         };
 
         window.addEventListener('message', handleMessage);
-        vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, offset: 0, intent: 'initial' });
+        vscode.postMessage({ command: 'getMessages', limit: FETCH_LIMIT, intent: 'initial' });
 
         return () => {
             window.removeEventListener('message', handleMessage);
