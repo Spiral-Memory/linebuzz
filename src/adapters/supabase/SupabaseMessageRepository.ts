@@ -33,14 +33,15 @@ export class SupabaseMessageRepository implements IMessageRepository {
         throw new Error(`Unexpected response status: ${response.status}`);
     }
 
-    async getMessages(teamId: string, limit: number = 50, offset: number = 0): Promise<MessageResponse[]> {
+    async getMessages(teamId: string, limit: number = 50, anchorId?: string, direction: 'before' | 'after' | 'around' = 'before'): Promise<MessageResponse[]> {
         const supabase = SupabaseClient.getInstance().client;
-        logger.info("SupabaseMessageRepository", `Getting messages for team: ${teamId} limit: ${limit} offset: ${offset}`);
+        logger.info("SupabaseMessageRepository", `Getting messages for team: ${teamId} limit: ${limit} anchor: ${anchorId} direction: ${direction}`);
 
         const { data, error } = await supabase.rpc('get_messages', {
             p_team_id: teamId,
             p_limit: limit,
-            p_offset: offset
+            p_anchor_id: anchorId,
+            p_direction: direction
         });
 
         if (error) {

@@ -3,6 +3,7 @@ import { TeamService } from './TeamService';
 import { MessageService } from './MessageService';
 import { SnippetService } from './SnippetService';
 import {NavigatorService} from './NavigatorService';
+import {ContextLensService} from './ContextLensService';
 import { logger } from "../utils/logger";
 
 interface Services {
@@ -11,6 +12,7 @@ interface Services {
     MessageService: MessageService;
     SnippetService: SnippetService;
     NavigatorService: NavigatorService;
+    ContextLensService: ContextLensService;
 }
 
 export class ServiceContainer {

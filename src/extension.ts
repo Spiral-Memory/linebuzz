@@ -5,19 +5,22 @@ import { Container } from './core/services/ServiceContainer';
 import { Storage } from "./core/platform/storage";
 import { logger } from './core/utils/logger';
 import { SupabaseTeamRepository } from "./adapters/supabase/SupabaseTeamRepository";
+import { SupabaseCodeRepository } from "./adapters/supabase/SupabaseCodeRepository";
 import { TeamService } from "./core/services/TeamService";
 import { MessageService } from "./core/services/MessageService";
 import { SupabaseMessageRepository } from "./adapters/supabase/SupabaseMessageRepository";
-import { loginCommand } from "./core/commands/LoginCommand";
-import { createTeamCommand } from "./core/commands/CreateTeamCommand";
-import { sendMessageCommand } from "./core/commands/SendMessageCommand";
-import { joinTeamCommand } from "./core/commands/JoinTeamCommand";
-import { leaveTeamCommand } from "./core/commands/LeaveTeamCommand";
-import { captureSnippetCommand } from "./core/commands/CaptureSnippetCommand";
+import { loginCommand } from "./core/commands/AuthCommand";
+import { createTeamCommand, joinTeamCommand, leaveTeamCommand } from "./core/commands/TeamCommand";
+import { sendMessageCommand } from "./core/commands/MessageCommand";
+import { captureSnippetCommand } from "./core/commands/SnippetCommand";
 import { TeamFeedProvider } from "./core/providers/TeamFeedProvider";
 import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
+import { ContextLensService } from "./core/services/ContextLensService";
+import { activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
+import { CodeLensProvider } from "./core/providers/CodeLensProvider";
+import { ReadOnlyContentProvider } from "./core/providers/ReadOnlyContentProvider";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -26,11 +29,13 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
         const supabaseTeamRepository = new SupabaseTeamRepository();
         const teamService = new TeamService(supabaseTeamRepository);
+        context.subscriptions.push(teamService);
         Container.register('TeamService', teamService);
         await teamService.initialize();
 
         const supbaseAuthRepository = new SupabaseAuthRepository();
         authService = new AuthService(supbaseAuthRepository);
+        context.subscriptions.push(authService);
         Container.register('AuthService', authService);
         await authService.initializeSession(false);
 
@@ -39,11 +44,17 @@ export async function activate(context: vscode.ExtensionContext) {
         Container.register('MessageService', messageService);
 
         const snippetService = new SnippetService();
+        context.subscriptions.push(snippetService);
         Container.register('SnippetService', snippetService);
-        
+
         const navigatorService = new NavigatorService();
+        context.subscriptions.push(navigatorService);
         Container.register('NavigatorService', navigatorService);
 
+        const supabaseCodeRepository = new SupabaseCodeRepository();
+        const contextLensService = new ContextLensService(supabaseCodeRepository, context);
+        context.subscriptions.push(contextLensService);
+        Container.register('ContextLensService', contextLensService);
 
         // const teamFeedPanelProvider = new TeamFeedProvider();
         // vscode.window.registerTreeDataProvider(TeamFeedProvider.viewId, teamFeedPanelProvider);
@@ -53,13 +64,33 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.registerWebviewViewProvider(ChatPanelProvider.viewId, chatPanelProvider)
         );
 
+        const codeLensProvider = new CodeLensProvider(contextLensService);
+        context.subscriptions.push(
+            vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
+        );
+
+        context.subscriptions.push(
+            vscode.workspace.registerTextDocumentContentProvider(ReadOnlyContentProvider.scheme, new ReadOnlyContentProvider())
+        );
+
         context.subscriptions.push(
             vscode.commands.registerCommand('linebuzz.login', loginCommand),
-            vscode.commands.registerCommand('linebuzz.createTeam', createTeamCommand),
+            vscode.commands.registerCommand('linebuzz.createTeam', () => createTeamCommand()),
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
-            vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand)
+            vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand),
+            vscode.commands.registerCommand('linebuzz.activateCLens', () =>
+                activateCLensCommand(codeLensProvider)
+            ),
+            vscode.commands.registerCommand('linebuzz.deactivateCLens', () =>
+                deactivateCLensCommand(codeLensProvider)
+            ),
+            vscode.commands.registerCommand("clens.openPeek", openPeekCommand),
+            vscode.commands.registerCommand("clens.showDiff", showDiffCommand),
+            vscode.commands.registerCommand("linebuzz.jumpToMessage", (messageId: string) =>
+                chatPanelProvider.jumpToMessage(messageId)
+            )
         );
 
     } catch (e) {

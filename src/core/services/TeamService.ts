@@ -81,4 +81,8 @@ export class TeamService {
     public getTeam(): TeamInfo | undefined {
         return this.currentTeam;
     }
+
+    public dispose() {
+        this._onDidChangeTeam.dispose();
+    }
 }

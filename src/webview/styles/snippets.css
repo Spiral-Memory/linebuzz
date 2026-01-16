@@ -28,11 +28,14 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--vscode-descriptionForeground);
-    text-transform: lowercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.code-metadata.lowercase {
+    text-transform: lowercase;
 }
 
 .copy-code-btn,

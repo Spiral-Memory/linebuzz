@@ -50,5 +50,8 @@ export class AuthService {
             return null;
         }
     }
+    public dispose() {
+        this._onDidChangeSession.dispose();
+    }
 }
 

@@ -46,6 +46,16 @@
         "command": "linebuzz.captureSnippet",
         "title": "Capture Snippet",
         "category": "LineBuzz"
+      },
+      {
+        "command": "linebuzz.activateCLens",
+        "title": "Show Inline Discussions",
+        "icon": "$(code)"
+      },
+      {
+        "command": "linebuzz.deactivateCLens",
+        "title": "Hide Inline Discussions",
+        "icon": "$(coffee)"
       }
     ],
     "keybindings": [
@@ -92,6 +102,18 @@
         {
           "command": "linebuzz.captureSnippet",
           "group": "9_cutcopypaste@99"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "linebuzz.activateCLens",
+          "when": "view == linebuzz.chatpanel && !linebuzz.isCLensActive",
+          "group": "navigation"
+        },
+        {
+          "command": "linebuzz.deactivateCLens",
+          "when": "view == linebuzz.chatpanel && linebuzz.isCLensActive",
+          "group": "navigation"
         }
       ]
     },
@@ -150,13 +172,16 @@
     "@supabase/supabase-js": "^2.54.0",
     "@types/dompurify": "^3.0.5",
     "@types/marked": "^5.0.2",
+    "date-fns": "^4.1.0",
     "dedent": "^1.7.1",
     "dompurify": "^3.3.1",
     "dotenv": "^17.2.1",
     "git-url-parse": "^16.1.0",
     "he": "^1.2.0",
     "highlight.js": "^11.11.1",
+    "lru-cache": "^11.2.4",
     "marked": "^17.0.1",
+    "normalize-url": "^8.1.1",
     "seti-file-icons": "^0.0.8"
   }
 }

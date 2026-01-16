@@ -116,4 +116,8 @@ export class SnippetService {
         this._currentSnippets = [];
         this._onDidCaptureSnippet.fire([]);
     }
+
+    public dispose() {
+        this._onDidCaptureSnippet.dispose();
+    }
 }

@@ -11,7 +11,7 @@ export class NavigatorService {
         backgroundColor: new vscode.ThemeColor('editor.wordHighlightStrongBackground'),
         isWholeLine: true,
     });
-
+    
     public async openSnippet(snippet: Snippet): Promise<void> {
         if (!snippet) return;
 
@@ -81,5 +81,8 @@ export class NavigatorService {
             }, 1500);
             logger.info('NavigatorService', 'Navigated to snippet', snippet);
         }
+    }
+    public dispose() {
+        this.snippetDecoration.dispose();
     }
 }

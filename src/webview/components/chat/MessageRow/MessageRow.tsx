@@ -10,9 +10,10 @@ import { Snippet } from '../../../../types/IAttachment';
 interface MessageRowProps {
     message: any;
     onOpenSnippet?: (snippet: Snippet) => void;
+    isHighlighted?: boolean;
 }
 
-export const MessageRow = ({ message, onOpenSnippet }: MessageRowProps) => {
+export const MessageRow = ({ message, onOpenSnippet, isHighlighted }: MessageRowProps) => {
     const displayName = message.u?.display_name || message.u?.username || 'Unknown';
     const avatarUrl = message.u?.avatar_url;
     const initials = getInitials(displayName);
@@ -20,7 +21,11 @@ export const MessageRow = ({ message, onOpenSnippet }: MessageRowProps) => {
     const isMe = message.userType === 'me';
 
     return (
-        <div class={`${styles['message-row']} ${isMe ? styles['message-row-me'] : ''}`} key={message.message_id}>
+        <div
+            class={`${styles['message-row']} ${isMe ? styles['message-row-me'] : ''} ${isHighlighted ? styles['message-row-highlighted'] : ''}`}
+            key={message.message_id}
+            data-id={message.message_id}
+        >
             <div class={styles['avatar-container']}>
                 {avatarUrl ? (
                     <img
