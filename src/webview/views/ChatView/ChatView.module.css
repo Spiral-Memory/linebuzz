@@ -36,6 +36,7 @@
     -webkit-mask-size: 100% 20000px;
     -webkit-mask-position: left bottom;
     transition: mask-position 0.3s ease, -webkit-mask-position 0.3s ease;
+    position: relative;
 }
 
 .message-list:hover {

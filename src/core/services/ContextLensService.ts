@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import * as path from 'path';
 import * as fs from 'fs';
-import gitUrlParse from 'git-url-parse';
 import { formatDistanceToNow } from 'date-fns';
 import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
