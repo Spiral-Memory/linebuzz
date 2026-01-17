@@ -77,6 +77,7 @@ export class SnippetService {
         const chosenRemote = remotes.find((r: any) => r.name === 'origin') || remotes[0];
         const currentRef = repo.state.HEAD?.name;
         const currentSha = repo.state.HEAD?.commit?.id || repo.state.HEAD?.commit;
+        const patch = await repo.diffWithHEAD(realPath);
         const selection = editor.selection;
 
         const snippetData: Snippet = {
@@ -88,6 +89,7 @@ export class SnippetService {
             commit_sha: currentSha,
             ref: currentRef,
             remote_url: chosenRemote.fetchUrl,
+            patch: patch || null,
         };
 
         return snippetData;

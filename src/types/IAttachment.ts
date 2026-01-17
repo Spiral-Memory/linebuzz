@@ -11,6 +11,7 @@ export interface Snippet extends BaseAttachment {
     commit_sha: string;
     ref: string;
     remote_url: string;
+    patch: string | null;
 }
 
 export type Attachment = Snippet;

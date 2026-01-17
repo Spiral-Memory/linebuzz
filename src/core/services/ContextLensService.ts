@@ -53,7 +53,7 @@ export class ContextLensService {
             return [];
         }
         const uri = document.uri;
-        let fileData = this.cache.get(uri.toString());
+        let fileData: FileData | undefined = this.cache.get(uri.toString());
 
         if (!fileData) {
             const context = await this.getFileContext(document);
