@@ -34,6 +34,9 @@ export class ContextLensService {
 
         this._isCLensActive = Storage.getGlobal<boolean>("clens.active") ?? false;
         vscode.commands.executeCommand('setContext', 'linebuzz.isCLensActive', this._isCLensActive);
+        context.subscriptions.push(
+            vscode.workspace.onDidChangeTextDocument(e => this.updateLiveRanges(e))
+        );
     }
 
     public toggleCodeLens(value: boolean) {
@@ -85,10 +88,9 @@ export class ContextLensService {
 
         const lenses: vscode.CodeLens[] = [];
         lineGroups.forEach((discussionList, lineIndex) => {
-            const range = new vscode.Range(lineIndex, 0, lineIndex, 0);
             const latestTimestamp = Math.max(...discussionList.map(d => new Date(d.discussion.created_at).getTime()));
             const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
-            lenses.push(new vscode.CodeLens(range, {
+            lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
                 title: `☕ ${discussionList.length} References, ${timeAgo}`,
                 command: "clens.openPeek",
                 arguments: [uri, lineIndex, discussionList]
@@ -203,6 +205,37 @@ export class ContextLensService {
             file_path: relativePath,
             remote_url: chosenRemote.fetchUrl,
         };
+    }
+
+    private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
+        const key = event.document.uri.toString();
+        const trackedDiscussions = this.cache.get(key);
+
+        if (!trackedDiscussions || event.contentChanges.length === 0) return;
+
+        for (const change of event.contentChanges) {
+            const lineDelta = (change.text.split('\n').length - 1) - (change.range.end.line - change.range.start.line);
+            if (lineDelta === 0) continue;
+
+            const editStart = change.range.start;
+
+            for (const td of trackedDiscussions) {
+                const { start, end } = td.liveRange;
+
+                if (editStart.line > end.line) continue;
+
+                if (editStart.isBeforeOrEqual(start)) {
+                    td.liveRange = new vscode.Range(
+                        start.translate(lineDelta),
+                        end.translate(lineDelta)
+                    );
+                }
+                else {
+                    const newEndLine = Math.max(start.line, end.line + lineDelta);
+                    td.liveRange = new vscode.Range(start, end.with({ line: newEndLine }));
+                }
+            }
+        }
     }
 
     public dispose() {
