@@ -14,10 +14,15 @@ interface FileContext {
     remote_url: string;
 }
 
+interface TrackedDiscussion {
+    discussion: CodeDiscussion;
+    liveRange: vscode.Range;
+}
+
 export class ContextLensService {
     private _isCLensActive: boolean = false
     private buzzDecorationType: vscode.TextEditorDecorationType;
-    private cache = new LRUCache<string, CodeDiscussion[]>({
+    private cache = new LRUCache<string, TrackedDiscussion[]>({
         max: 100,
         allowStale: false
     });
@@ -47,8 +52,8 @@ export class ContextLensService {
             return [];
         }
         const uri = document.uri;
-        let discussions: CodeDiscussion[] | undefined = this.cache.get(uri.toString());
-        if (!discussions) {
+        let trackedDiscussions: TrackedDiscussion[] | undefined = this.cache.get(uri.toString());
+        if (!trackedDiscussions) {
             const context = await this.getFileContext(document);
             if (!context) return [];
 
@@ -58,63 +63,66 @@ export class ContextLensService {
                 if (!currentTeam) return [];
 
                 logger.info('ContextLensService', 'Fetching discussions', context);
-                discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
-                this.cache.set(uri.toString(), discussions);
+                const originalDiscussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
+                trackedDiscussions = originalDiscussions.map(d => ({
+                    discussion: d,
+                    liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
+                }));
+                this.cache.set(uri.toString(), trackedDiscussions);
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
                 return [];
             }
         }
 
-        const threads = new Map<number, CodeDiscussion[]>();
-        discussions.forEach(d => {
-            const lineIdx = d.start_line - 1;
-            const list = threads.get(lineIdx) || [];
-            list.push(d);
-            threads.set(lineIdx, list);
+        const lineGroups = new Map<number, TrackedDiscussion[]>();
+        trackedDiscussions.forEach(td => {
+            const lineIndex = td.liveRange.start.line;
+            const discussionList = lineGroups.get(lineIndex) || [];
+            discussionList.push(td);
+            lineGroups.set(lineIndex, discussionList);
         });
 
         const lenses: vscode.CodeLens[] = [];
-        threads.forEach((discussions, lineIdx) => {
-            const range = new vscode.Range(lineIdx, 0, lineIdx, 0);
-            const latestTimestamp = Math.max(...discussions.map(d => new Date(d.created_at).getTime()));
+        lineGroups.forEach((discussionList, lineIndex) => {
+            const range = new vscode.Range(lineIndex, 0, lineIndex, 0);
+            const latestTimestamp = Math.max(...discussionList.map(d => new Date(d.discussion.created_at).getTime()));
             const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
             lenses.push(new vscode.CodeLens(range, {
-                title: `☕ ${discussions.length} References, ${timeAgo}`,
+                title: `☕ ${discussionList.length} References, ${timeAgo}`,
                 command: "clens.openPeek",
-                arguments: [uri, lineIdx, discussions]
+                arguments: [uri, lineIndex, discussionList]
             }));
         });
-
-        this.applyHoverDecorations(uri, threads);
+        this.applyHoverDecorations(uri, lineGroups);
         return lenses;
     }
 
-    private applyHoverDecorations(uri: vscode.Uri, threads: Map<number, CodeDiscussion[]>) {
+    private applyHoverDecorations(uri: vscode.Uri, lineGroups: Map<number, TrackedDiscussion[]>) {
         const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri.toString());
         if (!editor) return;
 
         const decorations: vscode.DecorationOptions[] = [];
-        threads.forEach((discussions, lineIdx) => {
-            const textLine = editor.document.lineAt(lineIdx);
-            const range = new vscode.Range(lineIdx, textLine.firstNonWhitespaceCharacterIndex, lineIdx, textLine.firstNonWhitespaceCharacterIndex);
+        lineGroups.forEach((discussionList, lineIndex) => {
+            const textLine = editor.document.lineAt(lineIndex);
+            const range = new vscode.Range(lineIndex, textLine.firstNonWhitespaceCharacterIndex, lineIndex, textLine.firstNonWhitespaceCharacterIndex);
             decorations.push({
                 range,
-                hoverMessage: this.createMarkdownPopup(discussions, uri)
+                hoverMessage: this.createMarkdownPopup(discussionList, uri)
             });
         });
 
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
-    private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
+    private createMarkdownPopup(discussionList: TrackedDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
         md.supportHtml = true;
 
-        discussions.forEach((d, i) => {
-            const timeAgo = formatDistanceToNow(new Date(d.created_at), { addSuffix: true });
-            const user = d.message.u;
+        discussionList.forEach((d, i) => {
+            const timeAgo = formatDistanceToNow(new Date(d.discussion.created_at), { addSuffix: true });
+            const user = d.discussion.message.u;
             const userName = user?.display_name || user?.username || 'User';
             const avatarUrl = user?.avatar_url;
 
@@ -125,29 +133,29 @@ export class ContextLensService {
             md.appendMarkdown(`\n`);
             md.appendMarkdown(`${avatarMd}&nbsp;&nbsp;**${userName}**&nbsp;&nbsp;<span style="color:#808080;">$(history) ${timeAgo}</span>&nbsp;&nbsp;\n\n`);
 
-            if (d.content) {
+            if (d.discussion.content) {
                 const filename = path.basename(uri.fsPath);
-                md.appendMarkdown(`[\`@${filename}:L${d.start_line}-L${d.end_line}\`](command:clens.highlightCode "Reveal code")`);
+                md.appendMarkdown(`[\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\`](command:clens.highlightCode "Reveal code")`);
                 md.appendMarkdown('\n\n');
 
-                if (d.message.content) {
-                    const content = d.message.content.length > 100
-                        ? d.message.content.substring(0, 100) + '...'
-                        : d.message.content;
+                if (d.discussion.message.content) {
+                    const content = d.discussion.message.content.length > 100
+                        ? d.discussion.message.content.substring(0, 100) + '...'
+                        : d.discussion.message.content;
                     md.appendMarkdown(`${content}\n\n`);
                 }
 
                 const diffArgs = encodeURIComponent(JSON.stringify({
-                    originalContent: d.content,
+                    originalContent: d.discussion.content,
                     currentFileUri: uri.toString(),
-                    startLine: d.start_line,
-                    endLine: d.end_line
+                    startLine: d.discussion.start_line,
+                    endLine: d.discussion.end_line
                 }));
                 md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
-                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.message.message_id))} "View Discussion")`);
+                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.discussion.message.message_id))} "View Discussion")`);
 
-                if (i < discussions.length - 1) {
+                if (i < discussionList.length - 1) {
                     md.appendMarkdown('\n\n---\n\n');
                 }
                 md.appendMarkdown(`\n`);
