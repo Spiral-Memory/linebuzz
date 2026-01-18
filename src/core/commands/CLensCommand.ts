@@ -5,6 +5,9 @@ import { Container } from '../services/ServiceContainer';
 import { CodeLensProvider } from '../providers/CodeLensProvider';
 import { ReadOnlyContentProvider } from '../providers/ReadOnlyContentProvider';
 
+export const refreshCLensCommand = async (codeLensProvider: CodeLensProvider) => {
+    codeLensProvider.refresh();
+};
 export const activateCLensCommand = async (codeLensProvider: CodeLensProvider) => {
     await vscode.commands.executeCommand('setContext', 'linebuzz.isCLensActive', true);
     Container.get('ContextLensService').toggleCodeLens(true);

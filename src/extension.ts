@@ -18,7 +18,7 @@ import { ChatPanelProvider } from "./core/providers/ChatPanelProvider";
 import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
-import { activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
+import { refreshCLensCommand, activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 import { ReadOnlyContentProvider } from "./core/providers/ReadOnlyContentProvider";
 
@@ -85,6 +85,9 @@ export async function activate(context: vscode.ExtensionContext) {
             ),
             vscode.commands.registerCommand('linebuzz.deactivateCLens', () =>
                 deactivateCLensCommand(codeLensProvider)
+            ),
+            vscode.commands.registerCommand('linebuzz.refreshCLens', () =>
+                refreshCLensCommand(codeLensProvider)
             ),
             vscode.commands.registerCommand("clens.openPeek", openPeekCommand),
             vscode.commands.registerCommand("clens.showDiff", showDiffCommand),

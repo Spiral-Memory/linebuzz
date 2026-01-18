@@ -21,6 +21,8 @@ interface TrackedDiscussion {
 
 export class ContextLensService {
     private _isCLensActive: boolean = false
+    private _isRangeChanging: boolean = false;
+    private _shiftDebounce?: NodeJS.Timeout;
     private buzzDecorationType: vscode.TextEditorDecorationType;
     private cache = new LRUCache<string, TrackedDiscussion[]>({
         max: 100,
@@ -88,13 +90,21 @@ export class ContextLensService {
 
         const lenses: vscode.CodeLens[] = [];
         lineGroups.forEach((discussionList, lineIndex) => {
-            const latestTimestamp = Math.max(...discussionList.map(d => new Date(d.discussion.created_at).getTime()));
-            const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
-            lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
-                title: `☕ ${discussionList.length} References, ${timeAgo}`,
-                command: "clens.openPeek",
-                arguments: [uri, lineIndex, discussionList]
-            }));
+            if (this._isRangeChanging) {
+                lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
+                    title: `\u00a0\u00a0\u22ef\u00a0\u00a0`,
+                    command: ""
+                }));
+            }
+            else {
+                const latestTimestamp = Math.max(...discussionList.map(d => new Date(d.discussion.created_at).getTime()));
+                const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
+                lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
+                    title: `☕ ${discussionList.length} References, ${timeAgo}`,
+                    command: "clens.openPeek",
+                    arguments: [uri, lineIndex, discussionList]
+                }));
+            }
         });
         this.applyHoverDecorations(uri, lineGroups);
         return lenses;
@@ -215,26 +225,36 @@ export class ContextLensService {
 
         for (const change of event.contentChanges) {
             const lineDelta = (change.text.split('\n').length - 1) - (change.range.end.line - change.range.start.line);
-            if (lineDelta === 0) continue;
+            if (lineDelta) {
+                const editStart = change.range.start;
 
-            const editStart = change.range.start;
+                for (const td of trackedDiscussions) {
+                    const { start, end } = td.liveRange;
 
-            for (const td of trackedDiscussions) {
-                const { start, end } = td.liveRange;
+                    if (editStart.line > end.line) continue;
+                    this._isRangeChanging = true;
 
-                if (editStart.line > end.line) continue;
+                    if (editStart.isBeforeOrEqual(start)) {
+                        td.liveRange = new vscode.Range(
+                            start.translate(lineDelta),
+                            end.translate(lineDelta)
+                        );
+                    }
+                    else {
+                        const newEndLine = Math.max(start.line, end.line + lineDelta);
+                        td.liveRange = new vscode.Range(start, end.with({ line: newEndLine }));
+                    }
 
-                if (editStart.isBeforeOrEqual(start)) {
-                    td.liveRange = new vscode.Range(
-                        start.translate(lineDelta),
-                        end.translate(lineDelta)
-                    );
+                    if (this._shiftDebounce) clearTimeout(this._shiftDebounce);
+                    this._shiftDebounce = setTimeout(() => {
+                        this._isRangeChanging = false;
+                        vscode.commands.executeCommand('linebuzz.refreshCLens');
+                    }, 800);
                 }
-                else {
-                    const newEndLine = Math.max(start.line, end.line + lineDelta);
-                    td.liveRange = new vscode.Range(start, end.with({ line: newEndLine }));
-                }
+
             }
+
+
         }
     }
 
