@@ -14,17 +14,11 @@ interface FileContext {
     remote_url: string;
 }
 
-interface FileData extends FileContext {
-    discussions: CodeDiscussion[];
-}
-
 export class ContextLensService {
     private _isCLensActive: boolean = false
     private buzzDecorationType: vscode.TextEditorDecorationType;
-    private cache = new LRUCache<string, FileData>({
+    private cache = new LRUCache<string, CodeDiscussion[]>({
         max: 100,
-        ttl: 1000 * 60 * 30,
-        updateAgeOnGet: true,
         allowStale: false
     });
 
@@ -53,9 +47,8 @@ export class ContextLensService {
             return [];
         }
         const uri = document.uri;
-        let fileData: FileData | undefined = this.cache.get(uri.toString());
-
-        if (!fileData) {
+        let discussions: CodeDiscussion[] | undefined = this.cache.get(uri.toString());
+        if (!discussions) {
             const context = await this.getFileContext(document);
             if (!context) return [];
 
@@ -65,10 +58,8 @@ export class ContextLensService {
                 if (!currentTeam) return [];
 
                 logger.info('ContextLensService', 'Fetching discussions', context);
-                const discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
-
-                fileData = { ...context, discussions };
-                this.cache.set(uri.toString(), fileData);
+                discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
+                this.cache.set(uri.toString(), discussions);
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
                 return [];
@@ -76,7 +67,7 @@ export class ContextLensService {
         }
 
         const threads = new Map<number, CodeDiscussion[]>();
-        fileData.discussions.forEach(d => {
+        discussions.forEach(d => {
             const lineIdx = d.start_line - 1;
             const list = threads.get(lineIdx) || [];
             list.push(d);
