@@ -222,6 +222,11 @@ export class ContextLensService {
         const trackedDiscussions = this.cache.get(key);
 
         if (!trackedDiscussions || event.contentChanges.length === 0) return;
+        
+        if (!this._isRangeChanging) {
+            this._isRangeChanging = true;
+            vscode.commands.executeCommand('linebuzz.refreshClens');
+        }
 
         for (const change of event.contentChanges) {
             const lineDelta = (change.text.split('\n').length - 1) - (change.range.end.line - change.range.start.line);
@@ -232,7 +237,6 @@ export class ContextLensService {
                     const { start, end } = td.liveRange;
 
                     if (editStart.line > end.line) continue;
-                    this._isRangeChanging = true;
 
                     if (editStart.isBeforeOrEqual(start)) {
                         td.liveRange = new vscode.Range(
