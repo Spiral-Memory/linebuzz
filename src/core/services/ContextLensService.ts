@@ -16,6 +16,8 @@ interface FileContext {
 
 interface TrackedDiscussion {
     discussion: CodeDiscussion;
+    startOffset: number;
+    endOffset: number;
     liveRange: vscode.Range;
 }
 
@@ -71,6 +73,8 @@ export class ContextLensService {
                 const originalDiscussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
                 trackedDiscussions = originalDiscussions.map(d => ({
                     discussion: d,
+                    startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
+                    endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
                     liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
                 }));
                 this.cache.set(uri.toString(), trackedDiscussions);
@@ -216,52 +220,58 @@ export class ContextLensService {
             remote_url: chosenRemote.fetchUrl,
         };
     }
-
     private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
         const key = event.document.uri.toString();
         const trackedDiscussions = this.cache.get(key);
 
         if (!trackedDiscussions || event.contentChanges.length === 0) return;
-        
+
         if (!this._isRangeChanging) {
             this._isRangeChanging = true;
             vscode.commands.executeCommand('linebuzz.refreshClens');
         }
 
         for (const change of event.contentChanges) {
-            const lineDelta = (change.text.split('\n').length - 1) - (change.range.end.line - change.range.start.line);
-            if (lineDelta) {
-                const editStart = change.range.start;
+            const delta = change.text.length - change.rangeLength;
+            const changeStart = change.rangeOffset;
+            const changeEnd = change.rangeOffset + change.rangeLength;
 
-                for (const td of trackedDiscussions) {
-                    const { start, end } = td.liveRange;
-
-                    if (editStart.line > end.line) continue;
-
-                    if (editStart.isBeforeOrEqual(start)) {
-                        td.liveRange = new vscode.Range(
-                            start.translate(lineDelta),
-                            end.translate(lineDelta)
-                        );
-                    }
-                    else {
-                        const newEndLine = Math.max(start.line, end.line + lineDelta);
-                        td.liveRange = new vscode.Range(start, end.with({ line: newEndLine }));
-                    }
-
-                    if (this._shiftDebounce) clearTimeout(this._shiftDebounce);
-                    this._shiftDebounce = setTimeout(() => {
-                        this._isRangeChanging = false;
-                        vscode.commands.executeCommand('linebuzz.refreshCLens');
-                    }, 800);
+            for (const td of trackedDiscussions) {
+                // CASE A: Change is strictly BEFORE the range
+                if (changeEnd <= td.startOffset) {
+                    td.startOffset += delta;
+                    td.endOffset += delta;
                 }
-
+                // CASE B: Change overlaps or is INSIDE the range
+                else if (changeStart < td.endOffset) {
+                    // The end always moves by the delta if the edit touches the range
+                    td.endOffset += delta;
+                    // Edge Case: If the edit started before our start, 
+                    // we "snap" the start so it doesn't drift into deleted space.
+                    if (changeStart < td.startOffset) {
+                        td.startOffset = Math.max(changeStart + change.text.length, td.startOffset + delta);
+                    }
+                    if (td.startOffset > td.endOffset) td.endOffset = td.startOffset;
+                }
+                // CASE C: Change is strictly AFTER the range
+                // Do nothing
             }
-
-
         }
-    }
 
+        if (this._shiftDebounce) clearTimeout(this._shiftDebounce);
+
+        this._shiftDebounce = setTimeout(() => {
+            this._isRangeChanging = false;
+
+            for (const td of trackedDiscussions) {
+                td.liveRange = new vscode.Range(
+                    event.document.positionAt(td.startOffset),
+                    event.document.positionAt(td.endOffset)
+                );
+            }
+            vscode.commands.executeCommand('linebuzz.refreshClens');
+        }, 800);
+    }
     public dispose() {
         this.cache.clear();
         this.buzzDecorationType.dispose();
