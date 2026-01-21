@@ -231,30 +231,55 @@ export class ContextLensService {
             vscode.commands.executeCommand('linebuzz.refreshClens');
         }
 
-        for (const change of event.contentChanges) {
-            const delta = change.text.length - change.rangeLength;
+        const changes = [...event.contentChanges].sort(
+            (a, b) => a.rangeOffset - b.rangeOffset
+        );
+
+        for (const change of changes) {
             const changeStart = change.rangeOffset;
             const changeEnd = change.rangeOffset + change.rangeLength;
+            const insertedEnd = changeStart + change.text.length;
+            const delta = change.text.length - change.rangeLength;
 
             for (const td of trackedDiscussions) {
-                // CASE A: Change is strictly BEFORE the range
+                // CASE 1:
+                // Change is strictly before the range.
                 if (changeEnd <= td.startOffset) {
                     td.startOffset += delta;
                     td.endOffset += delta;
                 }
-                // CASE B: Change overlaps or is INSIDE the range
-                else if (changeStart < td.endOffset) {
-                    // The end always moves by the delta if the edit touches the range
-                    td.endOffset += delta;
-                    // Edge Case: If the edit started before our start, 
-                    // we "snap" the start so it doesn't drift into deleted space.
-                    if (changeStart < td.startOffset) {
-                        td.startOffset = Math.max(changeStart + change.text.length, td.startOffset + delta);
-                    }
-                    if (td.startOffset > td.endOffset) td.endOffset = td.startOffset;
+
+                // CASE 2:
+                // Change is strictly after the range.
+                else if (changeStart >= td.endOffset) {
+                    // no-op
                 }
-                // CASE C: Change is strictly AFTER the range
-                // Do nothing
+
+                // CASE 3:
+                // Change starts before or at the range and intersects it.
+                // Treat edit as part of the same discussion.
+                else if (changeStart <= td.startOffset && changeEnd > td.startOffset) {
+                    td.startOffset = changeStart;
+                    td.endOffset += delta;
+                }
+
+                // CASE 4:
+                // Change intersects only the end of the range.
+                else if (changeStart < td.endOffset && changeEnd >= td.endOffset) {
+                    td.endOffset = insertedEnd;
+                }
+
+                // CASE 5:
+                // Change lies strictly inside the range.
+                else if (changeStart > td.startOffset && changeEnd < td.endOffset) {
+                    td.endOffset += delta;
+                }
+
+                // CASE 6:
+                // Safety normalization after destructive edits.
+                if (td.startOffset > td.endOffset) {
+                    td.endOffset = td.startOffset;
+                }
             }
         }
 
