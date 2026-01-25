@@ -228,7 +228,7 @@ export class ContextLensService {
 
         if (!this._isRangeChanging) {
             this._isRangeChanging = true;
-            vscode.commands.executeCommand('linebuzz.refreshClens');
+            vscode.commands.executeCommand('linebuzz.refreshCLens');
         }
 
         const changes = [...event.contentChanges].sort(
@@ -294,7 +294,7 @@ export class ContextLensService {
                     event.document.positionAt(td.endOffset)
                 );
             }
-            vscode.commands.executeCommand('linebuzz.refreshClens');
+            vscode.commands.executeCommand('linebuzz.refreshCLens');
         }, 800);
     }
     public dispose() {
