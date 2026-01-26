@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import gitUrlParse from 'git-url-parse';
 import { Snippet } from "../../types/IAttachment";
 import { logger } from '../utils/logger';
+import { RelocatorEngine } from "./RelocationService";
 
 export class NavigatorService {
 
@@ -11,7 +12,7 @@ export class NavigatorService {
         backgroundColor: new vscode.ThemeColor('editor.wordHighlightStrongBackground'),
         isWholeLine: true,
     });
-    
+
     public async openSnippet(snippet: Snippet): Promise<void> {
         if (!snippet) return;
 
@@ -70,9 +71,49 @@ export class NavigatorService {
             }
 
             const editor = await vscode.window.showTextDocument(targetUri);
+
+            // Relocate if possible
+            let startLine = snippet.start_line - 1;
+            let endLine = snippet.end_line - 1;
+
+            if (snippet.content) {
+                try {
+                    const text = editor.document.getText();
+                    const relocator = new RelocatorEngine();
+
+                    const searchStartLine = Math.max(0, startLine - 500);
+                    const searchEndLine = Math.min(editor.document.lineCount - 1, endLine + 500);
+                    const windowStartOffset = editor.document.offsetAt(new vscode.Position(searchStartLine, 0));
+                    const windowEndOffset = editor.document.offsetAt(editor.document.lineAt(searchEndLine).range.end);
+
+                    const targetCode = text.substring(windowStartOffset, windowEndOffset);
+                    const estimatedStartOffset = editor.document.offsetAt(new vscode.Position(startLine, 0));
+                    const estimatedEndOffset = editor.document.offsetAt(new vscode.Position(endLine, 0));
+
+                    const result = relocator.relocate({
+                        snapshot: snippet.content,
+                        targetCode: targetCode,
+                        targetStartOffset: windowStartOffset,
+                        targetEndOffset: windowEndOffset,
+                        snapshotStartOffset: estimatedStartOffset,
+                        snapshotEndOffset: estimatedEndOffset
+                    });
+
+                    if (result.success) {
+                        const startPos = editor.document.positionAt(result.foundStartOffset);
+                        const endPos = editor.document.positionAt(result.foundEndOffset);
+                        startLine = startPos.line;
+                        endLine = endPos.line;
+                        logger.info('NavigatorService', 'Relocated snippet to lines', startLine, endLine);
+                    }
+                } catch (e) {
+                    logger.error('NavigatorService', 'Relocation failed', e);
+                }
+            }
+
             const selection = new vscode.Selection(
-                new vscode.Position(snippet.start_line - 1, 0),
-                new vscode.Position(snippet.end_line - 1, 0)
+                new vscode.Position(startLine, 0),
+                new vscode.Position(endLine, 0)
             );
             editor.revealRange(selection);
             editor.setDecorations(this.snippetDecoration, [selection]);

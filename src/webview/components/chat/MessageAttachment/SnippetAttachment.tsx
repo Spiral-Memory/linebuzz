@@ -1,4 +1,5 @@
 import { Snippet } from '../../../../types/IAttachment';
+import { useState } from 'preact/hooks';
 import hljs from 'highlight.js';
 import { encode as htmlEncode } from 'he';
 
@@ -8,6 +9,7 @@ interface SnippetAttachmentProps {
 }
 
 export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProps) => {
+    const [isLoading, setIsLoading] = useState(false);
     let highlightedText: string;
     const lang = snippet.file_path.split('.').pop() || 'text';
 
@@ -21,18 +23,33 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
         highlightedText = htmlEncode(snippet.content);
     }
 
-    const handleClick = (e: Event) => {
+    const handleClick = async (e: Event) => {
         const target = e.target as Element;
         if (target.closest('.copy-code-btn') || target.closest('.toggle-code-btn')) {
             return;
         }
+        if (isLoading) return;
+
+        setIsLoading(true);
+        // We don't have a promise returned from onNavigate usually as it posts a message
+        // But we want to show it briefly.
         onNavigate(snippet);
+
+        // Reset after a delay just in case calling it multiple times or it failed silently
+        setTimeout(() => setIsLoading(false), 2000);
     };
 
     return (
         <div class="code-block-wrapper">
             <div class="code-block-header">
-                <span class="code-metadata" onClick={handleClick} style={{ cursor: 'pointer' }} title="Jump to Source">
+                <span class="code-metadata" onClick={handleClick} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} title="Jump to Source">
+                    {isLoading && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'spin 1s linear infinite' }}>
+                            <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-opacity="0.3" stroke-width="3" fill="none" />
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
+                        </svg>
+                    )}
                     {snippet.file_path.split('/').pop() || snippet.file_path}:{snippet.start_line}-{snippet.end_line}
                 </span>
                 <div class="header-actions">

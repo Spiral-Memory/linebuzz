@@ -6,6 +6,7 @@ import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
 import { Storage } from "../platform/storage";
 import { Container } from "./ServiceContainer";
+import { RelocatorEngine } from "./RelocationService";
 import { CodeDiscussion, ICodeRepository } from "../../adapters/interfaces/ICodeRepository";
 
 
@@ -71,12 +72,62 @@ export class ContextLensService {
 
                 logger.info('ContextLensService', 'Fetching discussions', context);
                 const originalDiscussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
-                trackedDiscussions = originalDiscussions.map(d => ({
-                    discussion: d,
-                    startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
-                    endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
-                    liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
-                }));
+
+                const relocator = new RelocatorEngine();
+                const fileContent = document.getText();
+                trackedDiscussions = []
+
+                for (const d of originalDiscussions) {
+                    if (!d.content) {
+                        trackedDiscussions.push({
+                            discussion: d,
+                            startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
+                            endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
+                            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
+                        });
+                        continue;
+                    }
+
+                    const searchStartLine = Math.max(0, d.start_line - 1 - 500);
+                    const searchEndLine = Math.min(document.lineCount - 1, d.end_line - 1 + 500);
+
+                    const windowStartOffset = document.offsetAt(new vscode.Position(searchStartLine, 0));
+                    const windowEndOffset = document.offsetAt(document.lineAt(searchEndLine).range.end);
+
+                    const targetCode = fileContent.substring(windowStartOffset, windowEndOffset);
+                    const estimatedStartOffset = document.offsetAt(new vscode.Position(d.start_line - 1, 0));
+                    const estimatedEndOffset = document.offsetAt(new vscode.Position(d.end_line - 1, 0));
+
+                    const result = relocator.relocate({
+                        snapshot: d.content,
+                        targetCode: targetCode,
+                        targetStartOffset: windowStartOffset,
+                        targetEndOffset: windowEndOffset,
+                        snapshotStartOffset: estimatedStartOffset,
+                        snapshotEndOffset: estimatedEndOffset
+                    });
+
+                    if (result.success) {
+                        const newRange = new vscode.Range(
+                            document.positionAt(result.foundStartOffset),
+                            document.positionAt(result.foundEndOffset)
+                        );
+                        trackedDiscussions.push({
+                            discussion: d,
+                            startOffset: result.foundStartOffset,
+                            endOffset: result.foundEndOffset,
+                            liveRange: newRange
+                        });
+                    } else {
+                        trackedDiscussions.push({
+                            discussion: d,
+                            startOffset: estimatedStartOffset,
+                            endOffset: estimatedEndOffset,
+                            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
+                        });
+                    }
+                }
+
                 this.cache.set(uri.toString(), trackedDiscussions);
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
