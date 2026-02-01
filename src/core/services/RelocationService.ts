@@ -1,5 +1,4 @@
 import * as fuzzball from "fuzzball";
-import dedent from 'dedent';
 
 export interface RelocationInput {
     snapshot: string;
@@ -57,7 +56,7 @@ export class RelocatorEngine {
         if (relativeStart >= 0 && (relativeStart + snapshotLength) <= input.targetCode.length) {
             const candidate = input.targetCode.substring(relativeStart, relativeStart + snapshotLength);
 
-            if (input.snapshot.trim() === dedent(candidate).trim()) {
+            if (input.snapshot.trim() === candidate.trim()) {
                 return {
                     success: true,
                     foundStartOffset: input.snapshotStartOffset,

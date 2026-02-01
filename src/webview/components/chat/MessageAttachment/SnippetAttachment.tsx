@@ -2,6 +2,7 @@ import { Snippet } from '../../../../types/IAttachment';
 import { useState } from 'preact/hooks';
 import hljs from 'highlight.js';
 import { encode as htmlEncode } from 'he';
+import dedent from 'dedent';
 
 interface SnippetAttachmentProps {
     snippet: Snippet;
@@ -9,18 +10,31 @@ interface SnippetAttachmentProps {
 }
 
 export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProps) => {
+
+    const _dedent = (text: string): string => {
+        if (!text) return '';
+
+        try {
+            return dedent(text);
+        } catch (error) {
+            console.warn('SnippetAttachment', 'Dedent failed, falling back to raw text', error);
+            return text;
+        }
+    }
+
+    const snippetContent = _dedent(snippet.content);
     const [isLoading, setIsLoading] = useState(false);
     let highlightedText: string;
     const lang = snippet.file_path.split('.').pop() || 'text';
 
     try {
         if (lang && hljs.getLanguage(lang)) {
-            highlightedText = hljs.highlight(snippet.content, { language: lang }).value;
+            highlightedText = hljs.highlight(snippetContent, { language: lang }).value;
         } else {
-            highlightedText = htmlEncode(snippet.content);
+            highlightedText = htmlEncode(snippetContent);
         }
     } catch (e) {
-        highlightedText = htmlEncode(snippet.content);
+        highlightedText = htmlEncode(snippetContent);
     }
 
     const handleClick = async (e: Event) => {
@@ -68,7 +82,7 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
                         aria-label="Copy code"
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(snippet.content);
+                            navigator.clipboard.writeText(snippetContent);
                             const btn = e.currentTarget as HTMLButtonElement;
                             btn.innerHTML = `<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M13.2929 4.29289C13.6834 4.68342 13.6834 5.31658 13.2929 5.70711L7.29289 11.7071C6.90237 12.0976 6.2692 12.0976 5.87868 11.7071L2.70711 8.53553C2.31658 8.14501 2.31658 7.51184 2.70711 7.12132C3.09763 6.7308 3.7308 6.7308 4.12132 7.12132L6.58579 9.58579L11.8787 4.29289C12.2692 3.90237 12.9024 3.90237 13.2929 4.29289Z" fill="currentColor"></path></svg>`;
                             setTimeout(() => {

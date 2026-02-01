@@ -3,23 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Snippet } from "../../types/IAttachment";
 import { logger } from '../utils/logger';
-import dedent from 'dedent';
 
 export class SnippetService {
     private _currentSnippets: Snippet[] = [];
     private _onDidCaptureSnippet = new vscode.EventEmitter<Snippet[] | []>();
     public readonly onDidCaptureSnippet = this._onDidCaptureSnippet.event;
-
-    private _dedent(text: string): string {
-        if (!text) return '';
-
-        try {
-            return dedent(text);
-        } catch (error) {
-            logger.warn('SnippetService', 'Dedent failed, falling back to raw text', error);
-            return text;
-        }
-    }
 
     private _isDuplicate(snippet: Snippet): boolean {
         const isDuplicate = this._currentSnippets.some(s =>
@@ -85,7 +73,7 @@ export class SnippetService {
             file_path: relativePath,
             start_line: selection.start.line + 1,
             end_line: selection.end.line + 1,
-            content: this._dedent(editor.document.getText(selection)),
+            content: editor.document.getText(selection),
             commit_sha: currentSha,
             ref: currentRef,
             remote_url: chosenRemote.fetchUrl,
