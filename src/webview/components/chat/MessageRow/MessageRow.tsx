@@ -9,7 +9,7 @@ import { Snippet } from '../../../../types/IAttachment';
 
 interface MessageRowProps {
     message: any;
-    onOpenSnippet?: (snippet: Snippet) => void;
+    onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
     isHighlighted?: boolean;
 }
 
@@ -63,7 +63,7 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted }: MessageRow
                                     <SnippetAttachment
                                         key={index}
                                         snippet={attachment as Snippet}
-                                        onNavigate={(s) => onOpenSnippet?.(s)}
+                                        onNavigate={(s, rid) => onOpenSnippet?.(s, rid)}
                                     />
                                 );
                             }

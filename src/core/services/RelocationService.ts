@@ -1,7 +1,7 @@
 import * as fuzzball from "fuzzball";
 import dedent from 'dedent';
 
-interface RelocationInput {
+export interface RelocationInput {
     snapshot: string;
     targetCode: string;
     targetStartOffset: number;
@@ -30,11 +30,14 @@ interface Vote {
 
 
 export class RelocatorEngine {
-    private readonly MIN_CONFIDENCE = 65;
-    private readonly BOILERPLATE_THRESHOLD = 0.85;
+    private readonly MIN_CONFIDENCE = 75;
     private readonly STRECH_THRESHOLD = 0.05
 
-    public relocate(input: RelocationInput): RelocationResult {
+    public relocate(inputs: RelocationInput[]): RelocationResult[] {
+        return inputs.map(input => this.processSingleRelocation(input));
+    }
+
+    private processSingleRelocation(input: RelocationInput): RelocationResult {
         if (!input.snapshot.trim()) {
             return {
                 success: false,
@@ -85,7 +88,7 @@ export class RelocatorEngine {
             matches.forEach((match: any) => {
                 if (match.score < this.MIN_CONFIDENCE) return;
 
-                const localLineOffset = targetLineOffsets[match.index];
+                const localLineOffset = targetLineOffsets[match.key];
                 const globalFoundOffset = input.targetStartOffset + localLineOffset;
                 const predictedStart = globalFoundOffset - anchor.relativeOffset;
 
@@ -122,21 +125,11 @@ export class RelocatorEngine {
             clusters.set(clusterKey, cluster);
         }
 
-        const [primaryCluster, runnerUpCluster] = Array.from(clusters.values())
+        const [primaryCluster] = Array.from(clusters.values())
             .sort((a, b) => b.weight - a.weight);
 
         if (!primaryCluster) {
             return { success: false, foundStartOffset: 0, foundEndOffset: 0, confidence: 0, reason: 'orphaned' };
-        }
-
-        if (runnerUpCluster && runnerUpCluster.weight > primaryCluster.weight * this.BOILERPLATE_THRESHOLD) {
-            return {
-                success: false,
-                foundStartOffset: 0,
-                foundEndOffset: 0,
-                confidence: primaryCluster.weight,
-                reason: 'collision'
-            };
         }
 
         const bestVote = primaryCluster.votes.reduce((best, current) =>
@@ -157,7 +150,7 @@ export class RelocatorEngine {
         const anchors: Anchor[] = lines[0] ? [{ text: lines[0], relativeOffset: 0 }] : [];
 
         const lineOffsets = this.calculateLineOffsets(lines.join('\n'));
-        const targetCount = Math.min(20, Math.ceil(lines.length / 10) || 1);
+        const targetCount = Math.min(20, Math.ceil(lines.length / 5) || 1);
         const step = Math.max(1, Math.floor(lines.length / targetCount));
 
         for (let i = step; i < lines.length && anchors.length < 20; i += step) {

@@ -6,7 +6,7 @@ import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
 import { Storage } from "../platform/storage";
 import { Container } from "./ServiceContainer";
-import { RelocatorEngine } from "./RelocationService";
+import { RelocatorEngine, RelocationInput } from "./RelocationService";
 import { CodeDiscussion, ICodeRepository } from "../../adapters/interfaces/ICodeRepository";
 
 
@@ -31,6 +31,7 @@ export class ContextLensService {
         max: 100,
         allowStale: false
     });
+    private relocator = new RelocatorEngine();
 
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
@@ -68,75 +69,19 @@ export class ContextLensService {
             try {
                 const teamService = Container.get("TeamService");
                 const currentTeam = teamService.getTeam();
-                if (!currentTeam) return [];
-
-                logger.info('ContextLensService', 'Fetching discussions', context);
-                const originalDiscussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
-
-                const relocator = new RelocatorEngine();
-                const fileContent = document.getText();
-                trackedDiscussions = []
-
-                for (const d of originalDiscussions) {
-                    if (!d.content) {
-                        trackedDiscussions.push({
-                            discussion: d,
-                            startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
-                            endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
-                            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
-                        });
-                        continue;
-                    }
-
-                    const searchStartLine = Math.max(0, d.start_line - 1 - 500);
-                    const searchEndLine = Math.min(document.lineCount - 1, d.end_line - 1 + 500);
-
-                    const windowStartOffset = document.offsetAt(new vscode.Position(searchStartLine, 0));
-                    const windowEndOffset = document.offsetAt(document.lineAt(searchEndLine).range.end);
-
-                    const targetCode = fileContent.substring(windowStartOffset, windowEndOffset);
-                    const estimatedStartOffset = document.offsetAt(new vscode.Position(d.start_line - 1, 0));
-                    const estimatedEndOffset = document.offsetAt(new vscode.Position(d.end_line - 1, 0));
-
-                    const result = relocator.relocate({
-                        snapshot: d.content,
-                        targetCode: targetCode,
-                        targetStartOffset: windowStartOffset,
-                        targetEndOffset: windowEndOffset,
-                        snapshotStartOffset: estimatedStartOffset,
-                        snapshotEndOffset: estimatedEndOffset
-                    });
-
-                    if (result.success) {
-                        const newRange = new vscode.Range(
-                            document.positionAt(result.foundStartOffset),
-                            document.positionAt(result.foundEndOffset)
-                        );
-                        trackedDiscussions.push({
-                            discussion: d,
-                            startOffset: result.foundStartOffset,
-                            endOffset: result.foundEndOffset,
-                            liveRange: newRange
-                        });
-                    } else {
-                        trackedDiscussions.push({
-                            discussion: d,
-                            startOffset: estimatedStartOffset,
-                            endOffset: estimatedEndOffset,
-                            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
-                        });
-                    }
+                if (currentTeam) {
+                    logger.info('ContextLensService', 'Fetching discussions', context);
+                    const discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
+                    trackedDiscussions = this.alignDiscussions(document, discussions);
+                    this.cache.set(uri.toString(), trackedDiscussions);
                 }
-
-                this.cache.set(uri.toString(), trackedDiscussions);
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
-                return [];
             }
         }
 
         const lineGroups = new Map<number, TrackedDiscussion[]>();
-        trackedDiscussions.forEach(td => {
+        trackedDiscussions?.forEach(td => {
             const lineIndex = td.liveRange.start.line;
             const discussionList = lineGroups.get(lineIndex) || [];
             discussionList.push(td);
@@ -272,6 +217,15 @@ export class ContextLensService {
         };
     }
     private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
+        if (event.reason === vscode.TextDocumentChangeReason.Undo ||
+            event.reason === vscode.TextDocumentChangeReason.Redo ||
+            event.contentChanges.some(c => c.text.length > 500 || c.rangeLength > 500)) {
+
+            this.cache.delete(event.document.uri.toString());
+            vscode.commands.executeCommand('linebuzz.refreshCLens');
+            return;
+        }
+
         const key = event.document.uri.toString();
         const trackedDiscussions = this.cache.get(key);
 
@@ -348,6 +302,58 @@ export class ContextLensService {
             vscode.commands.executeCommand('linebuzz.refreshCLens');
         }, 800);
     }
+
+    private alignDiscussions(document: vscode.TextDocument, discussions: CodeDiscussion[]): TrackedDiscussion[] {
+        const fileContent = document.getText();
+
+        const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => ({
+            discussion: d,
+            startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
+            endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
+            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
+        }));
+
+        const candidates = trackedDiscussions.filter(td => td.discussion.content);
+        if (!candidates.length) return trackedDiscussions;
+
+        const inputs = candidates.map(td =>
+            this.createRelocationInput(td.discussion, document, fileContent)
+        );
+
+        const results = this.relocator.relocate(inputs);
+
+        results.forEach((result, i) => {
+            if (result.success) {
+                const td = candidates[i];
+                td.startOffset = result.foundStartOffset;
+                td.endOffset = result.foundEndOffset;
+                td.liveRange = new vscode.Range(
+                    document.positionAt(result.foundStartOffset),
+                    document.positionAt(result.foundEndOffset)
+                );
+            }
+        });
+
+        return trackedDiscussions;
+    }
+
+    private createRelocationInput(d: CodeDiscussion, document: vscode.TextDocument, fileContent: string): RelocationInput {
+        const searchStartLine = Math.max(0, d.start_line - 1 - 500);
+        const searchEndLine = Math.min(document.lineCount - 1, d.end_line - 1 + 500);
+
+        const windowStartOffset = document.offsetAt(new vscode.Position(searchStartLine, 0));
+        const windowEndOffset = document.offsetAt(document.lineAt(searchEndLine).range.end);
+
+        return {
+            snapshot: d.content,
+            targetCode: fileContent.substring(windowStartOffset, windowEndOffset),
+            targetStartOffset: windowStartOffset,
+            targetEndOffset: windowEndOffset,
+            snapshotStartOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
+            snapshotEndOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0))
+        };
+    }
+
     public dispose() {
         this.cache.clear();
         this.buzzDecorationType.dispose();

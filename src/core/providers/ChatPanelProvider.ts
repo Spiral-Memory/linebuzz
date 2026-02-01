@@ -60,7 +60,12 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 this.snippetService.clearStagedSnippet();
                 break;
             case 'openSnippet': {
-                this.navigatorService.openSnippet(data.snippet);
+                const success = await this.navigatorService.openSnippet(data.snippet);
+                this._view?.webview.postMessage({
+                    command: 'openSnippetCompleted',
+                    requestId: data.requestId,
+                    success
+                });
                 break;
             }
 

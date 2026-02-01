@@ -5,7 +5,7 @@ import { encode as htmlEncode } from 'he';
 
 interface SnippetAttachmentProps {
     snippet: Snippet;
-    onNavigate: (snippet: Snippet) => void;
+    onNavigate: (snippet: Snippet, requestId: string) => void;
 }
 
 export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProps) => {
@@ -31,12 +31,22 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
         if (isLoading) return;
 
         setIsLoading(true);
-        // We don't have a promise returned from onNavigate usually as it posts a message
-        // But we want to show it briefly.
-        onNavigate(snippet);
+        const requestId = Math.random().toString(36).substring(7);
+        const safetyTimeout = setTimeout(() => {
+            if (isLoading) setIsLoading(false);
+        }, 5000);
 
-        // Reset after a delay just in case calling it multiple times or it failed silently
-        setTimeout(() => setIsLoading(false), 2000);
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.command === 'openSnippetCompleted' && message.requestId === requestId) {
+                clearTimeout(safetyTimeout);
+                setIsLoading(false);
+                window.removeEventListener('message', handleMessage);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        onNavigate(snippet, requestId);
     };
 
     return (
