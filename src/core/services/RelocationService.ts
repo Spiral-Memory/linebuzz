@@ -14,7 +14,7 @@ export interface RelocationResult {
     foundStartOffset: number;
     foundEndOffset: number;
     confidence: number;
-    reason: 'exact' | 'geometric' | 'collision' | 'orphaned' | 'empty';
+    reason: 'exact' | 'geometric' | 'orphaned' | 'empty';
 }
 
 interface Anchor {
@@ -29,8 +29,10 @@ interface Vote {
 
 
 export class RelocatorEngine {
-    private readonly MIN_CONFIDENCE = 75;
-    private readonly STRECH_THRESHOLD = 0.05
+    private readonly MIN_CONFIDENCE_SCORE = 75;
+    private readonly STRECH_THRESHOLD_RATIO = 0.05;
+    private readonly MATCH_DENSITY_THRESHOLD_RATIO = 0.4;
+    private readonly COLLISION_THRESHOLD = 0.85;
 
     public relocate(inputs: RelocationInput[]): RelocationResult[] {
         return inputs.map(input => this.processSingleRelocation(input));
@@ -85,7 +87,7 @@ export class RelocatorEngine {
             });
 
             matches.forEach((match: any) => {
-                if (match.score < this.MIN_CONFIDENCE) return;
+                if (match.score < this.MIN_CONFIDENCE_SCORE) return;
 
                 const localLineOffset = targetLineOffsets[match.key];
                 const globalFoundOffset = input.targetStartOffset + localLineOffset;
@@ -108,40 +110,52 @@ export class RelocatorEngine {
             };
         }
 
-        return this.resolveConsensus(votes, input.snapshot.length);
+        return this.resolveConsensus(votes, input.snapshot.length, anchors.length, input.snapshotStartOffset);
     }
 
-    private resolveConsensus(votes: Vote[], originalLength: number): RelocationResult {
-        const tolerance = Math.min(100, Math.max(10, Math.floor(originalLength * this.STRECH_THRESHOLD)));
+    private resolveConsensus(votes: Vote[], originalLength: number, anchorCount: number, originalOffset: number): RelocationResult {
+        const tolerance = Math.min(100, Math.max(10, Math.floor(originalLength * this.STRECH_THRESHOLD_RATIO)));
         const clusters = new Map<number, { weight: number, votes: Vote[] }>();
 
         for (const vote of votes) {
             const clusterKey = Math.floor(vote.predictedStartOffset / tolerance) * tolerance;
             const cluster = clusters.get(clusterKey) ?? { weight: 0, votes: [] };
-
             cluster.weight += vote.weight;
             cluster.votes.push(vote);
             clusters.set(clusterKey, cluster);
         }
 
-        const [primaryCluster] = Array.from(clusters.values())
-            .sort((a, b) => b.weight - a.weight);
+        let [primaryCluster, runnerUpCluster] = Array.from(clusters.values()).sort((a, b) => b.weight - a.weight);
 
-        if (!primaryCluster) {
+        if (!primaryCluster || primaryCluster.weight < this.MATCH_DENSITY_THRESHOLD_RATIO * anchorCount) {
             return { success: false, foundStartOffset: 0, foundEndOffset: 0, confidence: 0, reason: 'orphaned' };
         }
 
-        const bestVote = primaryCluster.votes.reduce((best, current) =>
+        let finalBestVote = primaryCluster.votes.reduce((best, current) =>
             (current.predictedStartOffset < best.predictedStartOffset) ? current : best
         );
 
-        const finalStart = bestVote.predictedStartOffset;
+        if (runnerUpCluster && runnerUpCluster.weight > this.COLLISION_THRESHOLD * primaryCluster.weight) {
+            const runnerBestVote = runnerUpCluster.votes.reduce((best, current) =>
+                (current.predictedStartOffset < best.predictedStartOffset) ? current : best
+            );
+
+            const primaryDist = Math.abs(finalBestVote.predictedStartOffset - originalOffset);
+            const runnerDist = Math.abs(runnerBestVote.predictedStartOffset - originalOffset);
+
+            if (runnerDist < primaryDist) {
+                primaryCluster = runnerUpCluster;
+                finalBestVote = runnerBestVote;
+            }
+        }
+
+        const finalStart = finalBestVote.predictedStartOffset;
 
         return {
             success: true,
             foundStartOffset: finalStart,
             foundEndOffset: finalStart + originalLength,
-            confidence: primaryCluster.weight,
+            confidence: primaryCluster.weight / anchorCount,
             reason: 'geometric'
         };
     }
