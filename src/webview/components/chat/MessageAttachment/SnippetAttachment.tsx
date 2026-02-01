@@ -4,6 +4,12 @@ import hljs from 'highlight.js';
 import { encode as htmlEncode } from 'he';
 import dedent from 'dedent';
 
+declare global {
+    interface Window {
+        vscode: any;
+    }
+}
+
 interface SnippetAttachmentProps {
     snippet: Snippet;
     onNavigate: (snippet: Snippet, requestId: string) => void;
@@ -24,6 +30,8 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
 
     const snippetContent = _dedent(snippet.content);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [diffArgs, setDiffArgs] = useState<any | null>(null);
     let highlightedText: string;
     const lang = snippet.file_path.split('.').pop() || 'text';
 
@@ -39,12 +47,14 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
 
     const handleClick = async (e: Event) => {
         const target = e.target as Element;
-        if (target.closest('.copy-code-btn') || target.closest('.toggle-code-btn')) {
+        if (target.closest('.copy-code-btn') || target.closest('.toggle-code-btn') || target.closest('.diff-btn')) {
             return;
         }
         if (isLoading) return;
 
         setIsLoading(true);
+        setLoadError(null);
+        setDiffArgs(null);
         const requestId = Math.random().toString(36).substring(7);
         const safetyTimeout = setTimeout(() => {
             if (isLoading) setIsLoading(false);
@@ -55,6 +65,11 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
             if (message.command === 'openSnippetCompleted' && message.requestId === requestId) {
                 clearTimeout(safetyTimeout);
                 setIsLoading(false);
+                if (!message.success && message.reason === 'file_not_found') {
+                    setLoadError('File not found in workspace');
+                } else if (message.success && message.reason !== 'exact') {
+                    setDiffArgs(message.diffArgs);
+                }
                 window.removeEventListener('message', handleMessage);
             }
         };
@@ -63,10 +78,20 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
         onNavigate(snippet, requestId);
     };
 
+    const handleDiffClick = (e: Event) => {
+        e.stopPropagation();
+        if (diffArgs) {
+            window.vscode.postMessage({
+                command: 'openDiff',
+                args: diffArgs
+            });
+        }
+    };
+
     return (
         <div class="code-block-wrapper">
             <div class="code-block-header">
-                <span class="code-metadata" onClick={handleClick} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} title="Jump to Source">
+                <span class="code-metadata" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {isLoading && (
                         <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'spin 1s linear infinite' }}>
                             <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
@@ -74,7 +99,39 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
                             <path d="M12 2C6.47715 2 2 6.47715 2 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
                         </svg>
                     )}
-                    {snippet.file_path.split('/').pop() || snippet.file_path}:{snippet.start_line}-{snippet.end_line}
+                    {loadError && (
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ color: '#dea841', cursor: 'default' }}
+                        >
+                            <title>{loadError}</title>
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    )}
+                    {diffArgs && (
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            onClick={handleDiffClick}
+                            style={{ color: '#dea841', cursor: 'pointer' }}
+                        >
+                            <title>Show Diff (Snippet modified)</title>
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    )}
+                    <span onClick={handleClick} style={{ cursor: 'pointer' }} title="Jump to Source">
+                        {snippet.file_path.split('/').pop() || snippet.file_path}:{snippet.start_line}-{snippet.end_line}
+                    </span>
                 </span>
                 <div class="header-actions">
                     <button

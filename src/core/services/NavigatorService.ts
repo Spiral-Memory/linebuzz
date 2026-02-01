@@ -13,14 +13,14 @@ export class NavigatorService {
 
     private relocator = new RelocatorEngine();
 
-    public async openSnippet(snippet: Snippet): Promise<boolean> {
-        if (!snippet) return false;
+    public async openSnippet(snippet: Snippet): Promise<{ success: boolean; reason?: 'file_not_found' | 'exact' | 'geometric' | 'orphaned' | 'empty' | 'error'; diffArgs?: any }> {
+        if (!snippet) return { success: false, reason: 'error' };
 
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (!gitExtension) {
             logger.error('SnippetService', 'Git extension not found.');
             vscode.window.showErrorMessage('Please enable Git extension in VSCode.');
-            return false;
+            return { success: false, reason: 'error' };
         }
 
         if (!gitExtension.isActive) {
@@ -31,7 +31,7 @@ export class NavigatorService {
             catch (e) {
                 logger.error('SnippetService', 'Failed to activate Git extension:', e);
                 vscode.window.showErrorMessage('Please enable Git extension in VSCode.');
-                return false;
+                return { success: false, reason: 'error' };
             }
         }
 
@@ -43,12 +43,14 @@ export class NavigatorService {
 
             if (!targetUri) {
                 // TODO: Search all files in repo, this maybe a casing mismatch
-                return false;
+                return { success: false, reason: 'file_not_found' };
             }
 
             const editor = await vscode.window.showTextDocument(targetUri);
             let startLine = snippet.start_line - 1;
             let endLine = snippet.end_line - 1;
+            let matchReason: 'exact' | 'geometric' | 'orphaned' | 'empty' | 'error' = 'exact';
+            let diffArgs: any | undefined;
 
             if (snippet.content) {
                 try {
@@ -78,6 +80,10 @@ export class NavigatorService {
                         startLine = startPos.line;
                         endLine = endPos.line;
                         logger.info('NavigatorService', 'Relocated snippet to lines', startLine, endLine);
+
+                        if (result.reason) {
+                            matchReason = result.reason;
+                        }
                     }
                 } catch (e) {
                     logger.error('NavigatorService', 'Relocation failed', e);
@@ -88,15 +94,37 @@ export class NavigatorService {
                 new vscode.Position(startLine, 0),
                 new vscode.Position(endLine, 0)
             );
-            editor.revealRange(selection);
+            editor.revealRange(selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
             editor.setDecorations(this.snippetDecoration, [selection]);
             setTimeout(() => {
                 editor.setDecorations(this.snippetDecoration, []);
             }, 1500);
+
+            if (matchReason !== 'exact') {
+                diffArgs = {
+                    originalContent: snippet.content,
+                    currentFileUri: editor.document.uri.toString(),
+                    startLine: snippet.start_line,
+                    endLine: snippet.end_line,
+                    liveStartLine: startLine,
+                    liveEndLine: endLine,
+                    ref: snippet.ref,
+                    commit_sha: snippet.commit_sha,
+                    patch: snippet.patch,
+                    filePath: snippet.file_path,
+                    remoteUrl: snippet.remote_url
+                };
+            }
+
             logger.info('NavigatorService', 'Navigated to snippet', snippet);
-            return true;
+
+            return {
+                success: true,
+                reason: matchReason,
+                diffArgs
+            };
         }
-        return false;
+        return { success: false, reason: 'file_not_found' };
     }
     public dispose() {
         this.snippetDecoration.dispose();
