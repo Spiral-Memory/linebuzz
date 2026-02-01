@@ -20,6 +20,10 @@ interface TrackedDiscussion {
     startOffset: number;
     endOffset: number;
     liveRange: vscode.Range;
+    relocationStatus?: {
+        success: boolean;
+        reason?: 'exact' | 'geometric' | 'orphaned' | 'empty';
+    };
 }
 
 export class ContextLensService {
@@ -157,11 +161,21 @@ export class ContextLensService {
                     md.appendMarkdown(`${content}\n\n`);
                 }
 
+
+                if (d.relocationStatus?.success === false) {
+                    md.appendMarkdown(`⚠️ **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                }
+
                 const diffArgs = encodeURIComponent(JSON.stringify({
                     originalContent: d.discussion.content,
                     currentFileUri: uri.toString(),
                     startLine: d.discussion.start_line,
-                    endLine: d.discussion.end_line
+                    endLine: d.discussion.end_line,
+                    ref: d.discussion.ref,
+                    commit_sha: d.discussion.commit_sha,
+                    patch: d.discussion.patch,
+                    filePath: d.discussion.file_path,
+                    remoteUrl: d.discussion.remote_url
                 }));
                 md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
@@ -323,8 +337,13 @@ export class ContextLensService {
         const results = this.relocator.relocate(inputs);
 
         results.forEach((result, i) => {
+            const td = candidates[i];
+            td.relocationStatus = {
+                success: result.success,
+                reason: result.reason
+            };
+
             if (result.success) {
-                const td = candidates[i];
                 td.startOffset = result.foundStartOffset;
                 td.endOffset = result.foundEndOffset;
                 td.liveRange = new vscode.Range(

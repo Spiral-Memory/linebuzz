@@ -1,10 +1,8 @@
 import * as vscode from "vscode";
-import * as path from 'path';
-import * as fs from 'fs';
-import gitUrlParse from 'git-url-parse';
 import { Snippet } from "../../types/IAttachment";
 import { logger } from '../utils/logger';
 import { RelocatorEngine } from "./RelocationService";
+import { findRepositoryByRemote, resolveFilePath } from "../utils/gitFileMapper";
 
 export class NavigatorService {
 
@@ -38,34 +36,10 @@ export class NavigatorService {
         }
 
         const api = gitExtension.exports.getAPI(1);
-        const repos = api.repositories;
-        if (!repos || repos.length === 0) return false;
-
-        let targetIdentity: string | null = null;
-        try {
-            const snippetInfo = gitUrlParse(snippet.remote_url);
-            targetIdentity = snippetInfo.full_name;
-        }
-        catch (e) {
-            logger.error('NavigatorService', 'Failed to parse repo url:', e);
-            return false;
-        }
-
-        const matchingRepo = repos.find((repo: any) => {
-            return repo.state.remotes.some((remote: any) => {
-                const url = remote.fetchUrl;
-                const remoteInfo = gitUrlParse(url);
-                return remoteInfo.full_name.toLowerCase() === targetIdentity.toLowerCase();
-            });
-        });
+        const matchingRepo = findRepositoryByRemote(api, snippet.remote_url);
 
         if (matchingRepo) {
-            let targetUri: vscode.Uri | undefined;
-            const snippetFilePath = snippet.file_path.split('/').join(path.sep);
-            const candidate = path.join(matchingRepo.rootUri.fsPath, snippetFilePath);
-            if (fs.existsSync(candidate)) {
-                targetUri = vscode.Uri.file(candidate);
-            }
+            let targetUri = resolveFilePath(matchingRepo, snippet.file_path);
 
             if (!targetUri) {
                 // TODO: Search all files in repo, this maybe a casing mismatch
