@@ -80,7 +80,7 @@ export class RelocatorEngine {
 
         for (const anchor of anchors) {
             const matches = fuzzball.extract(anchor.text, targetLines, {
-                scorer: fuzzball.token_set_ratio,
+                scorer: fuzzball.token_sort_ratio,
                 limit: 5,
                 returnObjects: true
             });
