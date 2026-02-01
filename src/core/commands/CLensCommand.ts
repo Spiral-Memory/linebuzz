@@ -62,7 +62,10 @@ const applyPatch = async (content: string, patch: string, filePath: string): Pro
 
 export const showDiffCommand = async (args: any) => {
     try {
-        const { originalContent, currentFileUri, startLine, endLine, commit_sha, filePath, patch, remoteUrl } = args;
+        const { originalContent, currentFileUri,
+            startLine, endLine,
+            commit_sha, filePath, patch, remoteUrl,
+            liveStartLine, liveEndLine } = args;
 
         if (!originalContent || !currentFileUri || startLine === undefined || endLine === undefined) {
             logger.error("CLensCommand", "Missing arguments");
@@ -71,7 +74,7 @@ export const showDiffCommand = async (args: any) => {
 
         const uri = vscode.Uri.parse(currentFileUri);
         const doc = await vscode.workspace.openTextDocument(uri);
-
+        let selection = new vscode.Range(liveStartLine, 0, liveEndLine, 0);
         let fetchedContent: string | null = null;
 
         if (commit_sha && filePath) {
@@ -120,7 +123,7 @@ export const showDiffCommand = async (args: any) => {
             const leftUri = ReadOnlyContentProvider.registerContent(`remote-ref/${uniqueKey}/${filename}`, fetchedContent);
             const rightUri = ReadOnlyContentProvider.registerContent(`local-current/${uniqueKey}/${filename}`, fullCurrentContent);
 
-            await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `${filename}: ${commit_sha.substring(0, 8)} ↔ Current`);
+            await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `${filename}: ${commit_sha.substring(0, 8)} ↔ Current`, { selection });
             return;
         }
 
@@ -150,7 +153,7 @@ export const showDiffCommand = async (args: any) => {
         const leftUri = ReadOnlyContentProvider.registerContent(`original/${uniqueKey}/${filename}`, originalContent);
         const rightUri = ReadOnlyContentProvider.registerContent(`current/${uniqueKey}/${filename}`, currentContent);
 
-        await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title);
+        await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, { selection });
 
     } catch (e) {
         logger.error("CLensCommand", "Failed to show diff", e);

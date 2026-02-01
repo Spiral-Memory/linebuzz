@@ -171,6 +171,8 @@ export class ContextLensService {
                     currentFileUri: uri.toString(),
                     startLine: d.discussion.start_line,
                     endLine: d.discussion.end_line,
+                    liveStartLine: d.liveRange.start.line,
+                    liveEndLine: d.liveRange.end.line,
                     ref: d.discussion.ref,
                     commit_sha: d.discussion.commit_sha,
                     patch: d.discussion.patch,
