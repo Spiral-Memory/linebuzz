@@ -125,7 +125,7 @@ export const SnippetAttachment = ({ snippet, onNavigate }: SnippetAttachmentProp
                             onClick={handleDiffClick}
                             style={{ color: '#dea841', cursor: 'pointer' }}
                         >
-                            <title>Show Diff (Snippet modified)</title>
+                            <title>View Diff (Code Diverged)</title>
                             <path d="M10.146 3.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L12.293 7H6.5A2.5 2.5 0 0 0 4 9.5v5a.5.5 0 0 1-1 0v-5A3.5 3.5 0 0 1 6.5 6h5.793l-2.147-2.146a.5.5 0 0 1 0-.708z" />
                             <path d="M13.854 20.854a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 0 1 .708.708L11.707 17H17.5a2.5 2.5 0 0 0 2.5-2.5v-5a.5.5 0 0 1 1 0v5a3.5 3.5 0 0 1-3.5 3.5h-5.793l2.147 2.146a.5.5 0 0 1 0 .708z" />
                         </svg>
