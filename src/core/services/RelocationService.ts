@@ -29,6 +29,7 @@ interface Vote {
 
 
 export class RelocatorEngine {
+    private readonly LOOKAHEAD_BUFFER = 50;
     private readonly MIN_CONFIDENCE_SCORE = 75;
     private readonly STRECH_THRESHOLD_RATIO = 0.05;
     private readonly MATCH_DENSITY_THRESHOLD_RATIO = 0.4;
@@ -54,15 +55,16 @@ export class RelocatorEngine {
     private tryExactMatch(input: RelocationInput): RelocationResult | null {
         const relativeStart = input.snapshotStartOffset - input.targetStartOffset;
         const snapshotLength = input.snapshot.length;
-
         if (relativeStart >= 0 && (relativeStart + snapshotLength) <= input.targetCode.length) {
-            const candidate = input.targetCode.substring(relativeStart, relativeStart + snapshotLength);
+            const candidate = input.targetCode.substring(relativeStart, relativeStart + snapshotLength + this.LOOKAHEAD_BUFFER);
+            const cleanSnapshot = input.snapshot.replace(/\s+/g, '');
+            const cleanCandidate = candidate.replace(/\s+/g, '');
 
-            if (input.snapshot.trim() === candidate.trim()) {
+            if (cleanCandidate.startsWith(cleanSnapshot)) {
                 return {
                     success: true,
                     foundStartOffset: input.snapshotStartOffset,
-                    foundEndOffset: input.snapshotEndOffset,
+                    foundEndOffset: input.snapshotStartOffset + snapshotLength,
                     confidence: 1.0,
                     reason: 'exact'
                 };
