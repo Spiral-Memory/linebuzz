@@ -2,7 +2,7 @@ export const renderSnippet = ({ validLanguage, highlightedText }: { validLanguag
     return (
         `<div class="code-block-wrapper">
          <div class="code-block-header">
-            <span class="code-metadata">${validLanguage}</span>
+            <span class="code-metadata lowercase">${validLanguage}</span>
             <div class="header-actions">
                 <button class="copy-code-btn" aria-label="Copy code">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" >

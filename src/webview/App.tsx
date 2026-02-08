@@ -66,10 +66,11 @@ export function App() {
     });
   };
 
-  const handleOpenSnippet = (snippet: Snippet) => {
+  const handleOpenSnippet = (snippet: Snippet, requestId?: string) => {
     vscode.postMessage({
       command: 'openSnippet',
-      snippet
+      snippet,
+      requestId
     });
   };
 

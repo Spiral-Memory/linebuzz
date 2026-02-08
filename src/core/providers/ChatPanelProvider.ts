@@ -60,10 +60,21 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 this.snippetService.clearStagedSnippet();
                 break;
             case 'openSnippet': {
-                this.navigatorService.openSnippet(data.snippet);
+                const result = await this.navigatorService.openSnippet(data.snippet);
+                this._view?.webview.postMessage({
+                    command: 'openSnippetCompleted',
+                    requestId: data.requestId,
+                    success: result.success,
+                    reason: result.reason,
+                    diffArgs: result.diffArgs
+                });
                 break;
             }
-            
+
+            case 'openDiff':
+                await vscode.commands.executeCommand('clens.showDiff', data.args);
+                break;
+
             case 'sendMessage': {
                 try {
                     const MessageResponse = await this.messageService.sendMessage(data.body);
@@ -82,13 +93,35 @@ export class ChatPanelProvider extends BaseWebviewProvider {
 
             case 'getMessages': {
                 try {
-                    const { limit, offset } = data;
-                    const messages = await this.messageService.getMessages(limit, offset);
+                    const { limit, anchorId, direction, intent } = data;
+                    const messages = await this.messageService.getMessages(limit, anchorId, direction);
 
-                    this._view?.webview.postMessage({
-                        command: offset && offset > 0 ? 'prependMessages' : 'loadInitialMessages',
-                        messages: messages
-                    });
+                    let command: string | null = null;
+                    switch (intent) {
+                        case 'initial':
+                            command = 'loadInitialMessages';
+                            break;
+                        case 'jump-to-bottom':
+                            command = 'jumpToBottom';
+                            break;
+                        case 'paginate-newer':
+                            command = 'appendMessagesBatch';
+                            break;
+                        case 'paginate-older':
+                            command = 'prependMessages';
+                            break;
+                        case 'jump-to-message':
+                            command = 'jumpToMessage';
+                            break;
+                    }
+
+                    if (command) {
+                        this._view?.webview.postMessage({
+                            command: command,
+                            messages: messages,
+                            targetId: anchorId
+                        });
+                    }
 
                     if (this._subscription) {
                         this._subscription.unsubscribe();
@@ -122,6 +155,17 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 }
                 break;
         }
+    }
+
+    public async jumpToMessage(messageId: string) {
+        if (!this._view) {
+            await vscode.commands.executeCommand('linebuzz.chatpanel.focus');
+        }
+
+        this._view?.webview.postMessage({
+            command: 'jumpToMessage',
+            targetId: messageId
+        });
     }
 
     private async updateIdentity() {
