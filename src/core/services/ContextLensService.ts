@@ -163,7 +163,10 @@ export class ContextLensService {
 
 
                 if (d.relocationStatus?.success === false) {
-                    md.appendMarkdown(`⚠️ **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                    md.appendMarkdown(`$(search-stop) **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                }
+                else if (d.relocationStatus?.reason !== 'exact') {
+                    md.appendMarkdown(`$(search-fuzzy) **Partial match:** Review the diff to see the changes.\n\n`);
                 }
 
                 const diffArgs = encodeURIComponent(JSON.stringify({
