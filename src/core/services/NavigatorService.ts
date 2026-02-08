@@ -49,7 +49,7 @@ export class NavigatorService {
             const editor = await vscode.window.showTextDocument(targetUri);
             let startLine = snippet.start_line - 1;
             let endLine = snippet.end_line - 1;
-            let matchReason: 'exact' | 'geometric' | 'orphaned' | 'empty' | 'error' = 'exact';
+            let matchReason: 'exact' | 'geometric' | 'orphaned' | 'empty' | 'error' = 'error';
             let diffArgs: any | undefined;
 
             if (snippet.content) {

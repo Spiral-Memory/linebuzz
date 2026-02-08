@@ -21,3 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Various bug fixes including scroll jitter and file casing issues.
+
+## [0.2.1] - 2026-02-09
+
+### Fixed
+- Fixed navigator bug.
