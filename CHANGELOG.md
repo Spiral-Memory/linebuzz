@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-08
+
 ### Added
 - **Custom Virtualization Strategy**: Implemented a custom-built virtualization strategy (inspired by TanStack) for efficient rendering and state management.
 - **CodeLens & Deep Linking**: Added CodeLens support with **Deep Linking** capabilities.
