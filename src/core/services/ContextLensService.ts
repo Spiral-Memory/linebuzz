@@ -151,14 +151,13 @@ export class ContextLensService {
 
             if (d.discussion.content) {
                 const filename = path.basename(uri.fsPath);
-                md.appendMarkdown(`[\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\`](command:clens.highlightCode "Reveal code")`);
-                md.appendMarkdown('\n\n');
+                md.appendMarkdown(`\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\``);
 
                 if (d.discussion.message.content) {
                     const content = d.discussion.message.content.length > 100
                         ? d.discussion.message.content.substring(0, 100) + '...'
                         : d.discussion.message.content;
-                    md.appendMarkdown(`${content}\n\n`);
+                    md.appendMarkdown(`&nbsp;&nbsp;${content}\n\n`);
                 }
 
 
