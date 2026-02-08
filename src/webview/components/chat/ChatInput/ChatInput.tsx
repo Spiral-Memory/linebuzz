@@ -9,7 +9,7 @@ interface ChatInputProps {
     stagedSnippet?: Snippet[] | [];
     onClearSnippet?: () => void;
     onRemoveSnippet?: (index: number) => void;
-    onOpenSnippet?: (snippet: Snippet) => void;
+    onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
     jumpToBottom?: () => void;
 }
 
@@ -96,7 +96,10 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
                             key={`${snippet.file_path}-${index}`}
                             snippet={snippet}
                             onRemove={() => onRemoveSnippet(index)}
-                            onOpen={() => onOpenSnippet && onOpenSnippet(snippet)}
+                            onOpen={() => {
+                                const requestId = Math.random().toString(36).substring(7);
+                                onOpenSnippet && onOpenSnippet(snippet, requestId);
+                            }}
                         />
                     ))}
                 </div>

@@ -166,6 +166,7 @@
     "eslint": "^9.25.1",
     "npm-run-all": "^4.1.5",
     "preact": "^10.28.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   },
   "dependencies": {
@@ -176,6 +177,7 @@
     "dedent": "^1.7.1",
     "dompurify": "^3.3.1",
     "dotenv": "^17.2.1",
+    "fuzzball": "^2.2.3",
     "git-url-parse": "^16.1.0",
     "he": "^1.2.0",
     "highlight.js": "^11.11.1",

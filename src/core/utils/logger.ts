@@ -1,5 +1,3 @@
-import * as vscode from 'vscode';
-
 export const logger = {
     info: (context: string, message: string, ...args: any[]): void => {
         log('INFO', context, message, args);

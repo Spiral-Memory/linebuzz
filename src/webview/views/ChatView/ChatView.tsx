@@ -12,7 +12,7 @@ interface ChatViewProps {
     stagedSnippet?: Snippet[] | [];
     onClearSnippet?: () => void;
     onRemoveSnippet?: (index: number) => void;
-    onOpenSnippet?: (snippet: Snippet) => void;
+    onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
 }
 
 interface ScrollSnapshot {

@@ -12,7 +12,9 @@ Stay in flow with your team using built-in huddles, team management, and persist
 * **Team Management**: Create, join, and switch teams easily.
 * **Dev-First**: Markdown support with code syntax highlighting.
 * **Theme Aware**: Automatically adapts to your VS Code theme (Light/Dark).
-* **Secure Backend**: Built on Supabase for reliable real-time sync.
+* **Secure Infrastructure**: Built on Supabase for reliable, secure real-time data synchronization.
+* **Inline Code Discussions**: Comment directly on specific lines of code to keep context.
+* **Smart Deep Linking**: Seamlessly navigate between chat messages and referenced code files.
 
 ## **Development** 🛠️
 
@@ -56,11 +58,13 @@ That’s it -> LineBuzz will start running in the new window.
 
 ## **Roadmap 🛣️**
 
-* **Inline Code Discussions**: Comment directly on specific lines of code.
+* **Issue Threads**: Create threads for issues and code discussions.
 * **Team Feed**: Activity stream for team events and updates.
 * **Mentions & Notifications**: @mention team members and get notified.
+* **E2E**: Support end-to-end encryption
+* **Integrations**: Support bridging with external platforms (Slack, Discord, Teams, etc.)
 * **AI Summaries**: Auto-generated summaries of catch-up conversations.
-* **Deep Linking**: Jump from chat messages to relevant code files.
+
 
 ## **Contributing 🤝**
 

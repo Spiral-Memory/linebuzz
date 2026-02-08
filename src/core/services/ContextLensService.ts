@@ -6,6 +6,7 @@ import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';
 import { Storage } from "../platform/storage";
 import { Container } from "./ServiceContainer";
+import { RelocatorEngine, RelocationInput } from "./RelocationService";
 import { CodeDiscussion, ICodeRepository } from "../../adapters/interfaces/ICodeRepository";
 
 
@@ -14,19 +15,27 @@ interface FileContext {
     remote_url: string;
 }
 
-interface FileData extends FileContext {
-    discussions: CodeDiscussion[];
+interface TrackedDiscussion {
+    discussion: CodeDiscussion;
+    startOffset: number;
+    endOffset: number;
+    liveRange: vscode.Range;
+    relocationStatus?: {
+        success: boolean;
+        reason?: 'exact' | 'geometric' | 'orphaned' | 'empty';
+    };
 }
 
 export class ContextLensService {
     private _isCLensActive: boolean = false
+    private _isRangeChanging: boolean = false;
+    private _shiftDebounce?: NodeJS.Timeout;
     private buzzDecorationType: vscode.TextEditorDecorationType;
-    private cache = new LRUCache<string, FileData>({
+    private cache = new LRUCache<string, TrackedDiscussion[]>({
         max: 100,
-        ttl: 1000 * 60 * 30,
-        updateAgeOnGet: true,
         allowStale: false
     });
+    private relocator = new RelocatorEngine();
 
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
@@ -35,6 +44,9 @@ export class ContextLensService {
 
         this._isCLensActive = Storage.getGlobal<boolean>("clens.active") ?? false;
         vscode.commands.executeCommand('setContext', 'linebuzz.isCLensActive', this._isCLensActive);
+        context.subscriptions.push(
+            vscode.workspace.onDidChangeTextDocument(e => this.updateLiveRanges(e))
+        );
     }
 
     public toggleCodeLens(value: boolean) {
@@ -53,77 +65,80 @@ export class ContextLensService {
             return [];
         }
         const uri = document.uri;
-        let fileData = this.cache.get(uri.toString());
-
-        if (!fileData) {
+        let trackedDiscussions: TrackedDiscussion[] | undefined = this.cache.get(uri.toString());
+        if (!trackedDiscussions) {
             const context = await this.getFileContext(document);
             if (!context) return [];
 
             try {
                 const teamService = Container.get("TeamService");
                 const currentTeam = teamService.getTeam();
-                if (!currentTeam) return [];
-
-                logger.info('ContextLensService', 'Fetching discussions', context);
-                const discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
-
-                fileData = { ...context, discussions };
-                this.cache.set(uri.toString(), fileData);
+                if (currentTeam) {
+                    logger.info('ContextLensService', 'Fetching discussions', context);
+                    const discussions = await this.codeRepo.getDiscussionsByFile(context.file_path, context.remote_url, currentTeam.id);
+                    trackedDiscussions = this.alignDiscussions(document, discussions);
+                    this.cache.set(uri.toString(), trackedDiscussions);
+                }
             } catch (e) {
                 logger.error('ContextLensService', 'Data fetch failed', e);
-                return [];
             }
         }
 
-        const threads = new Map<number, CodeDiscussion[]>();
-        fileData.discussions.forEach(d => {
-            const lineIdx = d.start_line - 1;
-            const list = threads.get(lineIdx) || [];
-            list.push(d);
-            threads.set(lineIdx, list);
+        const lineGroups = new Map<number, TrackedDiscussion[]>();
+        trackedDiscussions?.forEach(td => {
+            const lineIndex = td.liveRange.start.line;
+            const discussionList = lineGroups.get(lineIndex) || [];
+            discussionList.push(td);
+            lineGroups.set(lineIndex, discussionList);
         });
 
         const lenses: vscode.CodeLens[] = [];
-        threads.forEach((discussions, lineIdx) => {
-            const range = new vscode.Range(lineIdx, 0, lineIdx, 0);
-            const latestTimestamp = Math.max(...discussions.map(d => new Date(d.created_at).getTime()));
-            const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
-            lenses.push(new vscode.CodeLens(range, {
-                title: `☕ ${discussions.length} References, ${timeAgo}`,
-                command: "clens.openPeek",
-                arguments: [uri, lineIdx, discussions]
-            }));
+        lineGroups.forEach((discussionList, lineIndex) => {
+            if (this._isRangeChanging) {
+                lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
+                    title: `\u00a0\u00a0\u22ef\u00a0\u00a0`,
+                    command: ""
+                }));
+            }
+            else {
+                const latestTimestamp = Math.max(...discussionList.map(d => new Date(d.discussion.created_at).getTime()));
+                const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
+                lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
+                    title: `☕ ${discussionList.length} References, ${timeAgo}`,
+                    command: "clens.openPeek",
+                    arguments: [uri, lineIndex, discussionList]
+                }));
+            }
         });
-
-        this.applyHoverDecorations(uri, threads);
+        this.applyHoverDecorations(uri, lineGroups);
         return lenses;
     }
 
-    private applyHoverDecorations(uri: vscode.Uri, threads: Map<number, CodeDiscussion[]>) {
+    private applyHoverDecorations(uri: vscode.Uri, lineGroups: Map<number, TrackedDiscussion[]>) {
         const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri.toString());
         if (!editor) return;
 
         const decorations: vscode.DecorationOptions[] = [];
-        threads.forEach((discussions, lineIdx) => {
-            const textLine = editor.document.lineAt(lineIdx);
-            const range = new vscode.Range(lineIdx, textLine.firstNonWhitespaceCharacterIndex, lineIdx, textLine.firstNonWhitespaceCharacterIndex);
+        lineGroups.forEach((discussionList, lineIndex) => {
+            const textLine = editor.document.lineAt(lineIndex);
+            const range = new vscode.Range(lineIndex, textLine.firstNonWhitespaceCharacterIndex, lineIndex, textLine.firstNonWhitespaceCharacterIndex);
             decorations.push({
                 range,
-                hoverMessage: this.createMarkdownPopup(discussions, uri)
+                hoverMessage: this.createMarkdownPopup(discussionList, uri)
             });
         });
 
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
-    private createMarkdownPopup(discussions: CodeDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
+    private createMarkdownPopup(discussionList: TrackedDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
         md.supportHtml = true;
 
-        discussions.forEach((d, i) => {
-            const timeAgo = formatDistanceToNow(new Date(d.created_at), { addSuffix: true });
-            const user = d.message.u;
+        discussionList.forEach((d, i) => {
+            const timeAgo = formatDistanceToNow(new Date(d.discussion.created_at), { addSuffix: true });
+            const user = d.discussion.message.u;
             const userName = user?.display_name || user?.username || 'User';
             const avatarUrl = user?.avatar_url;
 
@@ -134,29 +149,41 @@ export class ContextLensService {
             md.appendMarkdown(`\n`);
             md.appendMarkdown(`${avatarMd}&nbsp;&nbsp;**${userName}**&nbsp;&nbsp;<span style="color:#808080;">$(history) ${timeAgo}</span>&nbsp;&nbsp;\n\n`);
 
-            if (d.content) {
+            if (d.discussion.content) {
                 const filename = path.basename(uri.fsPath);
-                md.appendMarkdown(`[\`@${filename}:L${d.start_line}-L${d.end_line}\`](command:clens.highlightCode "Reveal code")`);
+                md.appendMarkdown(`[\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\`](command:clens.highlightCode "Reveal code")`);
                 md.appendMarkdown('\n\n');
 
-                if (d.message.content) {
-                    const content = d.message.content.length > 100
-                        ? d.message.content.substring(0, 100) + '...'
-                        : d.message.content;
+                if (d.discussion.message.content) {
+                    const content = d.discussion.message.content.length > 100
+                        ? d.discussion.message.content.substring(0, 100) + '...'
+                        : d.discussion.message.content;
                     md.appendMarkdown(`${content}\n\n`);
                 }
 
+
+                if (d.relocationStatus?.success === false) {
+                    md.appendMarkdown(`⚠️ **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                }
+
                 const diffArgs = encodeURIComponent(JSON.stringify({
-                    originalContent: d.content,
+                    originalContent: d.discussion.content,
                     currentFileUri: uri.toString(),
-                    startLine: d.start_line,
-                    endLine: d.end_line
+                    startLine: d.discussion.start_line,
+                    endLine: d.discussion.end_line,
+                    liveStartLine: d.liveRange.start.line,
+                    liveEndLine: d.liveRange.end.line,
+                    ref: d.discussion.ref,
+                    commit_sha: d.discussion.commit_sha,
+                    patch: d.discussion.patch,
+                    filePath: d.discussion.file_path,
+                    remoteUrl: d.discussion.remote_url
                 }));
                 md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
-                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.message.message_id))} "View Discussion")`);
+                md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.discussion.message.message_id))} "View Discussion")`);
 
-                if (i < discussions.length - 1) {
+                if (i < discussionList.length - 1) {
                     md.appendMarkdown('\n\n---\n\n');
                 }
                 md.appendMarkdown(`\n`);
@@ -203,6 +230,148 @@ export class ContextLensService {
         return {
             file_path: relativePath,
             remote_url: chosenRemote.fetchUrl,
+        };
+    }
+    private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
+        if (event.reason === vscode.TextDocumentChangeReason.Undo ||
+            event.reason === vscode.TextDocumentChangeReason.Redo ||
+            event.contentChanges.some(c => c.text.length > 500 || c.rangeLength > 500)) {
+
+            this.cache.delete(event.document.uri.toString());
+            vscode.commands.executeCommand('linebuzz.refreshCLens');
+            return;
+        }
+
+        const key = event.document.uri.toString();
+        const trackedDiscussions = this.cache.get(key);
+
+        if (!trackedDiscussions || event.contentChanges.length === 0) return;
+
+        if (!this._isRangeChanging) {
+            this._isRangeChanging = true;
+            vscode.commands.executeCommand('linebuzz.refreshCLens');
+        }
+
+        const changes = [...event.contentChanges].sort(
+            (a, b) => a.rangeOffset - b.rangeOffset
+        );
+
+        for (const change of changes) {
+            const changeStart = change.rangeOffset;
+            const changeEnd = change.rangeOffset + change.rangeLength;
+            const insertedEnd = changeStart + change.text.length;
+            const delta = change.text.length - change.rangeLength;
+
+            for (const td of trackedDiscussions) {
+                // CASE 1:
+                // Change is strictly before the range.
+                if (changeEnd <= td.startOffset) {
+                    td.startOffset += delta;
+                    td.endOffset += delta;
+                }
+
+                // CASE 2:
+                // Change is strictly after the range.
+                else if (changeStart >= td.endOffset) {
+                    // no-op
+                }
+
+                // CASE 3:
+                // Change starts before or at the range and intersects it.
+                // Treat edit as part of the same discussion.
+                else if (changeStart <= td.startOffset && changeEnd > td.startOffset) {
+                    td.startOffset = changeStart;
+                    td.endOffset += delta;
+                }
+
+                // CASE 4:
+                // Change intersects only the end of the range.
+                else if (changeStart < td.endOffset && changeEnd >= td.endOffset) {
+                    td.endOffset = insertedEnd;
+                }
+
+                // CASE 5:
+                // Change lies strictly inside the range.
+                else if (changeStart > td.startOffset && changeEnd < td.endOffset) {
+                    td.endOffset += delta;
+                }
+
+                // CASE 6:
+                // Safety normalization after destructive edits.
+                if (td.startOffset > td.endOffset) {
+                    td.endOffset = td.startOffset;
+                }
+            }
+        }
+
+        if (this._shiftDebounce) clearTimeout(this._shiftDebounce);
+
+        this._shiftDebounce = setTimeout(() => {
+            this._isRangeChanging = false;
+
+            for (const td of trackedDiscussions) {
+                td.liveRange = new vscode.Range(
+                    event.document.positionAt(td.startOffset),
+                    event.document.positionAt(td.endOffset)
+                );
+            }
+            vscode.commands.executeCommand('linebuzz.refreshCLens');
+        }, 800);
+    }
+
+    private alignDiscussions(document: vscode.TextDocument, discussions: CodeDiscussion[]): TrackedDiscussion[] {
+        const fileContent = document.getText();
+
+        const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => ({
+            discussion: d,
+            startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
+            endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
+            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
+        }));
+
+        const candidates = trackedDiscussions.filter(td => td.discussion.content);
+        if (!candidates.length) return trackedDiscussions;
+
+        const inputs = candidates.map(td =>
+            this.createRelocationInput(td.discussion, document, fileContent)
+        );
+
+        const results = this.relocator.relocate(inputs);
+
+        results.forEach((result, i) => {
+            const td = candidates[i];
+            td.relocationStatus = {
+                success: result.success,
+                reason: result.reason
+            };
+
+            if (result.success) {
+                td.startOffset = result.foundStartOffset;
+                td.endOffset = result.foundEndOffset;
+                td.liveRange = new vscode.Range(
+                    document.positionAt(result.foundStartOffset),
+                    document.positionAt(result.foundEndOffset)
+                );
+            }
+        });
+
+        return trackedDiscussions;
+    }
+
+    private createRelocationInput(d: CodeDiscussion, document: vscode.TextDocument, fileContent: string): RelocationInput {
+        const searchStartLine = Math.max(0, d.start_line - 1 - 500);
+        const searchEndLine = Math.min(document.lineCount - 1, d.end_line - 1 + 500);
+
+        const windowStartOffset = document.offsetAt(new vscode.Position(searchStartLine, 0));
+        const windowEndOffset = document.offsetAt(document.lineAt(searchEndLine).range.end);
+
+        return {
+            snapshot: d.content,
+            targetCode: fileContent.substring(windowStartOffset, windowEndOffset),
+            targetStartOffset: windowStartOffset,
+            targetEndOffset: windowEndOffset,
+            snapshotStartOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
+            snapshotEndOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0))
         };
     }
 
