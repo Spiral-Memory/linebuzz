@@ -63,13 +63,10 @@ export class SupabaseMessageRepository implements IMessageRepository {
     }
 
     async subscribeToMessages(teamId: string, userId: string, callback: (message: MessageResponse) => void): Promise<{ unsubscribe: () => void }> {
-        const supabase = SupabaseClient.getInstance().client;
         logger.info("SupabaseMessageRepository", `Subscribing to messages for team: ${teamId}`);
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-            await supabase.realtime.setAuth(session.access_token);
-        }
+        const supabaseClient = SupabaseClient.getInstance();
+        await supabaseClient.syncRealtimeAuth();
+        const supabase = supabaseClient.client;
 
         const channel = supabase
             .channel(`messages-team-${teamId}`)
