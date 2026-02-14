@@ -10,10 +10,10 @@ interface ChatInputProps {
     onClearSnippet?: () => void;
     onRemoveSnippet?: (index: number) => void;
     onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
-    jumpToBottom?: () => void;
+    onTyping?: () => void;
 }
 
-export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, jumpToBottom }: ChatInputProps) => {
+export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping }: ChatInputProps) => {
     const [value, setValue] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,6 +34,9 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
     const handleInput = (e: any) => {
         setValue(e.target.value);
         adjustHeight();
+        if (onTyping) {
+            onTyping();
+        }
     };
 
     const adjustHeight = () => {

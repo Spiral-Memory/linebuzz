@@ -9,6 +9,8 @@ import { SupabaseCodeRepository } from "./adapters/supabase/SupabaseCodeReposito
 import { TeamService } from "./core/services/TeamService";
 import { MessageService } from "./core/services/MessageService";
 import { SupabaseMessageRepository } from "./adapters/supabase/SupabaseMessageRepository";
+import { SupabaseActivityRepository } from "./adapters/supabase/SupabaseActivityRepository";
+import { ActivityService } from "./core/services/ActivityService";
 import { loginCommand } from "./core/commands/AuthCommand";
 import { createTeamCommand, joinTeamCommand, leaveTeamCommand } from "./core/commands/TeamCommand";
 import { sendMessageCommand } from "./core/commands/MessageCommand";
@@ -42,6 +44,10 @@ export async function activate(context: vscode.ExtensionContext) {
         const supabaseMessageRepository = new SupabaseMessageRepository();
         const messageService = new MessageService(supabaseMessageRepository);
         Container.register('MessageService', messageService);
+
+        const supabaseActivityRepository = new SupabaseActivityRepository();
+        const activityService = new ActivityService(supabaseActivityRepository);
+        Container.register('ActivityService', activityService);
 
         const snippetService = new SnippetService();
         context.subscriptions.push(snippetService);

@@ -7,6 +7,8 @@ import { LoadingSpinner } from '../../components/ui/Loaders/LoadingSpinner';
 import { Snippet } from '../../../types/IAttachment';
 import { vscode } from '../../utils/vscode';
 import styles from './ChatView.module.css';
+import { useTyping } from '../../hooks/useTyping';
+import { TypingIndicator } from '../../components/chat/TypingIndicator/TypingIndicator';
 
 interface ChatViewProps {
     stagedSnippet?: Snippet[] | [];
@@ -29,6 +31,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const [unreadCount, setUnreadCount] = useState(0);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+    const { typingUsers, sendTyping } = useTyping();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageListRef = useRef<HTMLDivElement>(null);
@@ -493,12 +496,13 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                 </>
             )}
             <div class={styles['chat-input-container']}>
+                <TypingIndicator typingUsers={typingUsers} />
                 <ChatInput
                     stagedSnippet={stagedSnippet}
                     onClearSnippet={onClearSnippet}
                     onRemoveSnippet={onRemoveSnippet}
                     onOpenSnippet={onOpenSnippet}
-                    jumpToBottom={handleJumpToBottom}
+                    onTyping={sendTyping}
                 />
             </div>
         </div>

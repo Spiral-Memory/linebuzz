@@ -11,6 +11,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
     private snippetService = Container.get('SnippetService');
     private messageService = Container.get('MessageService');
     private navigatorService = Container.get('NavigatorService');
+    private activityService = Container.get('ActivityService');
 
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri);
@@ -27,6 +28,14 @@ export class ChatPanelProvider extends BaseWebviewProvider {
         const teamSub = this.teamService.onDidChangeTeam(() => this.updateIdentity());
         const snippetSub = this.snippetService.onDidCaptureSnippet(() => this.updateSnippet());
 
+        let typingSub: { unsubscribe: () => void } | void;
+        this.activityService.subscribeToTyping((payload) => {
+            webviewView.webview.postMessage({
+                command: 'typing',
+                payload
+            });
+        }).then(sub => typingSub = sub);
+
         webviewView.onDidDispose(() => {
             if (this._subscription) {
                 this._subscription.unsubscribe();
@@ -35,6 +44,9 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             authSub.dispose();
             teamSub.dispose();
             snippetSub.dispose();
+            if (typingSub) {
+                typingSub.unsubscribe();
+            }
         });
     }
 
@@ -146,13 +158,16 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 break;
             }
 
-            case 'openExternal':
                 try {
                     await vscode.env.openExternal(vscode.Uri.parse(data.url));
                 } catch (error) {
                     console.error('Error handling openExternal:', error);
                     vscode.window.showErrorMessage('Failed to open external link.');
                 }
+                break;
+
+            case 'sendTyping':
+                await this.activityService.sendTypingSignal();
                 break;
         }
     }

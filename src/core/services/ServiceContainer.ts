@@ -2,8 +2,9 @@ import { AuthService } from './AuthService';
 import { TeamService } from './TeamService';
 import { MessageService } from './MessageService';
 import { SnippetService } from './SnippetService';
-import {NavigatorService} from './NavigatorService';
-import {ContextLensService} from './ContextLensService';
+import { NavigatorService } from './NavigatorService';
+import { ContextLensService } from './ContextLensService';
+import { ActivityService } from './ActivityService';
 import { logger } from "../utils/logger";
 
 interface Services {
@@ -13,6 +14,7 @@ interface Services {
     SnippetService: SnippetService;
     NavigatorService: NavigatorService;
     ContextLensService: ContextLensService;
+    ActivityService: ActivityService;
 }
 
 export class ServiceContainer {
