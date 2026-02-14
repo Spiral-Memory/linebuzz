@@ -21,6 +21,9 @@ export const useTyping = () => {
                     const otherUsers = prev.filter(u => u.userId !== userId);
                     return [...otherUsers, { userId, username, lastTypedAt: Date.now() }];
                 });
+            } else if (message.command === 'appendMessage') {
+                const { user_id } = message.message.u;
+                setTypingUsers(prev => prev.filter(u => u.userId !== user_id));
             }
         };
 
