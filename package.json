@@ -70,7 +70,7 @@
       {
         "command": "linebuzz.stepSound",
         "title": "Notifications: Sound",
-        "icon": "$(piano)"
+        "icon": "$(music)"
       }
     ],
     "keybindings": [
@@ -132,7 +132,7 @@
         },
         {
           "command": "linebuzz.stepMuted",
-          "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'mute'",
+          "when": "view == linebuzz.chatpanel && (!linebuzz.notificationMode || linebuzz.notificationMode == 'mute')",
           "group": "navigation@1"
         },
         {

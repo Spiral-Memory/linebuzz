@@ -23,6 +23,7 @@ import { ContextLensService } from "./core/services/ContextLensService";
 import { refreshCLensCommand, activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 import { ReadOnlyContentProvider } from "./core/providers/ReadOnlyContentProvider";
+import { NotificationService } from "./core/services/NotificationService";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -48,6 +49,9 @@ export async function activate(context: vscode.ExtensionContext) {
         const supabaseActivityRepository = new SupabaseActivityRepository();
         const activityService = new ActivityService(supabaseActivityRepository);
         Container.register('ActivityService', activityService);
+
+        const notificationService = new NotificationService(context);
+        Container.register('NotificationService', notificationService);
 
         const snippetService = new SnippetService();
         context.subscriptions.push(snippetService);
@@ -85,13 +89,13 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
             vscode.commands.registerCommand('linebuzz.stepMuted', async () =>
-                await vscode.commands.executeCommand('setContext', 'linebuzz.notificationMode', 'notify')
+                await notificationService.setMode('notify')
             ),
             vscode.commands.registerCommand('linebuzz.stepNotify', async () =>
-                await vscode.commands.executeCommand('setContext', 'linebuzz.notificationMode', 'sound')
+                await notificationService.setMode('sound')
             ),
             vscode.commands.registerCommand('linebuzz.stepSound', async () =>
-                await vscode.commands.executeCommand('setContext', 'linebuzz.notificationMode', 'muted')
+                await notificationService.setMode('mute')
             ),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
             vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand),

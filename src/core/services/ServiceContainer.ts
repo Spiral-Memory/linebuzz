@@ -5,6 +5,7 @@ import { SnippetService } from './SnippetService';
 import { NavigatorService } from './NavigatorService';
 import { ContextLensService } from './ContextLensService';
 import { ActivityService } from './ActivityService';
+import { NotificationService } from './NotificationService';
 import { logger } from "../utils/logger";
 
 interface Services {
@@ -15,6 +16,7 @@ interface Services {
     NavigatorService: NavigatorService;
     ContextLensService: ContextLensService;
     ActivityService: ActivityService;
+    NotificationService: NotificationService;
 }
 
 export class ServiceContainer {
