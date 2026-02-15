@@ -31,6 +31,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const [unreadCount, setUnreadCount] = useState(0);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+    const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
     const { typingUsers, sendTyping } = useTyping();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -220,6 +221,17 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const handleLoadNewerRef = useRef(handleLoadNewer);
     handleLoadOlderRef.current = handleLoadOlder;
     handleLoadNewerRef.current = handleLoadNewer;
+
+    const handleReply = (message: MessageResponse) => {
+        setReplyingTo(message);
+        // Focus the input
+        const input = document.querySelector('textarea');
+        if (input) (input as HTMLElement).focus();
+    };
+
+    const handleCancelReply = () => {
+        setReplyingTo(null);
+    };
 
     useEffect(() => {
         if (messages.length === 0) return;
@@ -480,6 +492,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                                 key={msg.message_id}
                                 onOpenSnippet={onOpenSnippet}
                                 isHighlighted={msg.message_id === highlightedMessageId}
+                                onReply={handleReply}
                             />
                         ))}
                         <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
@@ -503,6 +516,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     onRemoveSnippet={onRemoveSnippet}
                     onOpenSnippet={onOpenSnippet}
                     onTyping={sendTyping}
+                    replyingTo={replyingTo}
+                    onCancelReply={handleCancelReply}
                 />
             </div>
         </div>

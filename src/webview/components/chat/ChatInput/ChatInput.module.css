@@ -43,9 +43,11 @@
     min-width: 0;
     max-height: 120px;
     overflow-y: auto;
+
     &::-webkit-scrollbar {
         display: none;
     }
+
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -77,4 +79,64 @@
 .send-button-icon .icon {
     width: 16px;
     height: 16px;
+}
+
+.reply-preview {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 6px 6px 0 0;
+    margin: 2px 2px 0 2px;
+}
+
+.reply-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-to-text {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--vscode-textLink-foreground);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reply-icon-small {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+}
+
+.reply-message-text {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.8;
+    color: var(--vscode-foreground);
+}
+
+.cancel-reply-button {
+    background: none;
+    border: none;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+
+.cancel-reply-button:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
 }

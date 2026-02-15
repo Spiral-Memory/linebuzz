@@ -3,6 +3,7 @@
     align-items: flex-start;
     gap: 8px;
     padding: 4px;
+    position: relative;
 }
 
 .avatar-container {
@@ -94,4 +95,69 @@
 .message-row-highlighted {
     animation: fadeOut 2s forwards;
     border-radius: 4px;
+}
+
+.reply-button {
+    opacity: 0;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    align-items: center;
+    position: absolute;
+    top: 4px;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.message-row:not(.message-row-me) .reply-button {
+    right: 10px;
+}
+
+.message-row.message-row-me .reply-button {
+    left: 10px;
+}
+
+.message-row:hover .reply-button {
+    opacity: 1;
+}
+
+.reply-button:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
+}
+
+.quoted-message {
+    border-left: 2px solid var(--vscode-textLink-foreground);
+    background-color: var(--vscode-textBlockQuote-background);
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.8rem;
+    max-width: 100%;
+    opacity: 0.9;
+    align-self: flex-start;
+}
+
+.message-row-me .quoted-message {
+    align-self: flex-end;
+    border-left: none;
+    border-right: 2px solid var(--vscode-textLink-foreground);
+    border-radius: 4px 0 0 4px;
+}
+
+.quoted-user {
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    color: var(--vscode-textLink-foreground);
+}
+
+.quoted-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+    color: var(--vscode-foreground);
 }
