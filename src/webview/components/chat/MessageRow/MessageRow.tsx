@@ -29,12 +29,6 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply }: M
             key={message.message_id}
             data-id={message.message_id}
         >
-            <div class={styles['reply-button']} onClick={() => onReply?.(message)} title="Reply">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 14L4 9L9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    <path d="M4 9H14C18.4183 9 22 12.5817 22 17V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-            </div>
             <div class={styles['avatar-container']}>
                 {avatarUrl ? (
                     <img
@@ -90,6 +84,12 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply }: M
                         })}
                     </div>
                 )}
+            </div>
+            <div class={styles['reply-button']} onClick={() => onReply?.(message)} title="Reply">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 14L4 9L9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M4 9H14C18.4183 9 22 12.5817 22 17V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
             </div>
         </div>
     );
