@@ -14,9 +14,13 @@ export interface MessageResponse {
         avatar_url: string;
     };
     userType?: 'me' | 'other';
+    quoted_id?: string;
+    quoted_message?: MessageResponse;
+    attachments?: any[];
 }
 
 export interface MessageRequest {
     content: string;
     attachments: Attachment[];
+    quoted_id?: string;
 }
