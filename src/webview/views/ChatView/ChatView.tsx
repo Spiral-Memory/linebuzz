@@ -32,6 +32,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
     const [replyingTo, setReplyingTo] = useState<MessageResponse | null>(null);
+    const [editingMessage, setEditingMessage] = useState<MessageResponse | null>(null);
     const { typingUsers, sendTyping } = useTyping();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -224,13 +225,33 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
     const handleReply = (message: MessageResponse) => {
         setReplyingTo(message);
-        // Focus the input
+        setEditingMessage(null);
         const input = document.querySelector('textarea');
         if (input) (input as HTMLElement).focus();
     };
 
     const handleCancelReply = () => {
         setReplyingTo(null);
+    };
+
+    const handleEdit = (message: MessageResponse) => {
+        setEditingMessage(message);
+        setReplyingTo(null); // Clear reply if editing
+        const input = document.querySelector('textarea');
+        if (input) (input as HTMLElement).focus();
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMessage(null);
+    };
+
+    const handleDelete = (message: MessageResponse) => {
+        if (confirm('Are you sure you want to delete this message?')) {
+            vscode.postMessage({
+                command: 'deleteMessage',
+                messageId: message.message_id
+            });
+        }
     };
 
     useEffect(() => {
@@ -493,6 +514,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                                 onOpenSnippet={onOpenSnippet}
                                 isHighlighted={msg.message_id === highlightedMessageId}
                                 onReply={handleReply}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
                             />
                         ))}
                         <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
@@ -518,6 +541,8 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     onTyping={sendTyping}
                     replyingTo={replyingTo}
                     onCancelReply={handleCancelReply}
+                    editingMessage={editingMessage}
+                    onCancelEdit={handleCancelEdit}
                 />
             </div>
         </div>

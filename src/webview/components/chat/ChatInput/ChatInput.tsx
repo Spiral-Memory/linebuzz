@@ -13,9 +13,11 @@ interface ChatInputProps {
     onTyping?: () => void;
     replyingTo?: MessageResponse | null;
     onCancelReply?: () => void;
+    editingMessage?: MessageResponse | null;
+    onCancelEdit?: () => void;
 }
 
-export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply }: ChatInputProps) => {
+export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply, editingMessage, onCancelEdit }: ChatInputProps) => {
     const [value, setValue] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -32,6 +34,16 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
             window.removeEventListener('focus', handleFocus);
         };
     }, []);
+
+    useEffect(() => {
+        if (editingMessage) {
+            setValue(editingMessage.content || '');
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+                setTimeout(adjustHeight, 0);
+            }
+        }
+    }, [editingMessage]);
 
     const handleInput = (e: any) => {
         setValue(e.target.value);
@@ -52,18 +64,27 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
 
     const handleSend = () => {
         if (!value.trim() && (!stagedSnippet || stagedSnippet.length === 0)) return;
-        const messageRequest: MessageRequest = {
-            content: value,
-            attachments: stagedSnippet || [],
-            quoted_id: replyingTo?.message_id
-        };
-        vscode.postMessage({
-            command: 'sendMessage',
-            body: messageRequest
-        });
+        if (editingMessage) {
+            vscode.postMessage({
+                command: 'editMessage',
+                messageId: editingMessage.message_id,
+                content: value
+            });
+            if (onCancelEdit) onCancelEdit();
+        } else {
+            const messageRequest: MessageRequest = {
+                content: value,
+                attachments: stagedSnippet || [],
+                quoted_id: replyingTo?.message_id
+            };
+            vscode.postMessage({
+                command: 'sendMessage',
+                body: messageRequest
+            });
 
-        if (onCancelReply) {
-            onCancelReply();
+            if (onCancelReply) {
+                onCancelReply();
+            }
         }
 
         setValue('');
@@ -104,6 +125,30 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
                         </div>
                     </div>
                     <button class={styles['cancel-reply-button']} onClick={onCancelReply} aria-label="Cancel reply">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+            )}
+            {editingMessage && (
+                <div class={styles['reply-preview']}>
+                    <div class={styles['reply-content']}>
+                        <div class={styles['reply-to-text']}>
+                            <svg class={styles['reply-icon-small']} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Editing Message
+                        </div>
+                        <div class={styles['reply-message-text']}>
+                            {editingMessage.content}
+                        </div>
+                    </div>
+                    <button class={styles['cancel-reply-button']} onClick={() => {
+                        onCancelEdit?.();
+                        setValue('');
+                    }} aria-label="Cancel edit">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
