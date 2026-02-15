@@ -3,6 +3,7 @@
     align-items: flex-start;
     gap: 8px;
     padding: 4px;
+    position: relative;
 }
 
 .avatar-container {
@@ -94,4 +95,106 @@
 .message-row-highlighted {
     animation: fadeOut 2s forwards;
     border-radius: 4px;
+}
+
+.actions-container {
+    opacity: 0;
+    background-color: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-widget-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: absolute;
+    top: -4px;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.message-row:hover .actions-container {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.action-button {
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.1s ease, transform 0.1s ease;
+    height: 100%;
+}
+
+.action-button:hover {
+    color: var(--vscode-foreground);
+    transform: scale(1.1);
+}
+
+.action-button svg {
+    width: 12px;
+    height: 12px;
+    display: block;
+}
+
+.message-row:not(.message-row-me) .actions-container {
+    left: 2px;
+    transform: translateX(-10px) scale(0.9);
+}
+
+.message-row:not(.message-row-me):hover .actions-container {
+    transform: translateX(0) scale(1);
+}
+
+.message-row:not(.message-row-me) .action-button:first-child svg {
+    transform: scaleX(-1);
+}
+
+.message-row.message-row-me .actions-container {
+    right: 2px;
+    transform: translateX(10px) scale(0.9);
+}
+
+.message-row.message-row-me:hover .actions-container {
+    transform: translateX(0) scale(1);
+}
+
+.quoted-message {
+    border-left: 2px solid var(--vscode-textLink-foreground);
+    background-color: var(--vscode-textBlockQuote-background);
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.8rem;
+    max-width: 100%;
+    opacity: 0.9;
+    align-self: flex-start;
+}
+
+.message-row-me .quoted-message {
+    align-self: flex-end;
+    border-left: none;
+    border-right: 2px solid var(--vscode-textLink-foreground);
+    border-radius: 4px 0 0 4px;
+}
+
+.quoted-user {
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    color: var(--vscode-textLink-foreground);
+}
+
+.quoted-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+    color: var(--vscode-foreground);
 }
