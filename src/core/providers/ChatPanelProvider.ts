@@ -157,15 +157,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 }
                 break;
             }
-
-                try {
-                    await vscode.env.openExternal(vscode.Uri.parse(data.url));
-                } catch (error) {
-                    console.error('Error handling openExternal:', error);
-                    vscode.window.showErrorMessage('Failed to open external link.');
-                }
-                break;
-
+            
             case 'sendTyping':
                 await this.activityService.sendTypingSignal();
                 break;

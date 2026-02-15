@@ -84,6 +84,15 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('linebuzz.createTeam', () => createTeamCommand()),
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
+            vscode.commands.registerCommand('linebuzz.stepMuted', async () =>
+                await vscode.commands.executeCommand('setContext', 'linebuzz.notificationMode', 'notify')
+            ),
+            vscode.commands.registerCommand('linebuzz.stepNotify', async () =>
+                await vscode.commands.executeCommand('setContext', 'linebuzz.notificationMode', 'sound')
+            ),
+            vscode.commands.registerCommand('linebuzz.stepSound', async () =>
+                await vscode.commands.executeCommand('setContext', 'linebuzz.notificationMode', 'muted')
+            ),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
             vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand),
             vscode.commands.registerCommand('linebuzz.activateCLens', () =>

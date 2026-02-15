@@ -56,6 +56,21 @@
         "command": "linebuzz.deactivateCLens",
         "title": "Hide Inline Discussions",
         "icon": "$(coffee)"
+      },
+      {
+        "command": "linebuzz.stepMuted",
+        "title": "Notifications: Muted",
+        "icon": "$(gripper)"
+      },
+      {
+        "command": "linebuzz.stepNotify",
+        "title": "Notifications: Notify",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "linebuzz.stepSound",
+        "title": "Notifications: Sound",
+        "icon": "$(piano)"
       }
     ],
     "keybindings": [
@@ -114,6 +129,21 @@
           "command": "linebuzz.deactivateCLens",
           "when": "view == linebuzz.chatpanel && linebuzz.isCLensActive",
           "group": "navigation"
+        },
+        {
+          "command": "linebuzz.stepMuted",
+          "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'mute'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "linebuzz.stepNotify",
+          "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'notify'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "linebuzz.stepSound",
+          "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'sound'",
+          "group": "navigation@1"
         }
       ]
     },
@@ -184,6 +214,7 @@
     "lru-cache": "^11.2.4",
     "marked": "^17.0.1",
     "normalize-url": "^8.1.1",
+    "play-sound": "^1.1.6",
     "seti-file-icons": "^0.0.8"
   }
 }
