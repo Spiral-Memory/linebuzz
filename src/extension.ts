@@ -74,6 +74,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.registerWebviewViewProvider(ChatPanelProvider.viewId, chatPanelProvider)
         );
 
+        notificationService.setChatPanelProvider(chatPanelProvider);
+
         const codeLensProvider = new CodeLensProvider(contextLensService);
         context.subscriptions.push(
             vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
@@ -92,9 +94,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 await notificationService.setMode('notify')
             ),
             vscode.commands.registerCommand('linebuzz.stepNotify', async () =>
-                await notificationService.setMode('sound')
-            ),
-            vscode.commands.registerCommand('linebuzz.stepSound', async () =>
                 await notificationService.setMode('mute')
             ),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),

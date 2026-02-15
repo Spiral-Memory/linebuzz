@@ -2,19 +2,23 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { Storage } from '../platform/storage';
 import { logger } from '../utils/logger';
+import play from 'play-sound';
 
-// @ts-ignore
-import sound = require('play-sound');
+const player = play();
 
-const player = sound();
-
-export type NotificationMode = 'mute' | 'notify' | 'sound';
+export type NotificationMode = 'mute' | 'notify';
 
 export class NotificationService {
     private _mode: NotificationMode = 'mute';
 
+    private chatPanelProvider?: { isVisible: boolean };
+
     constructor(private context: vscode.ExtensionContext) {
         this.initialize();
+    }
+
+    public setChatPanelProvider(provider: { isVisible: boolean }) {
+        this.chatPanelProvider = provider;
     }
 
     private initialize() {
@@ -42,11 +46,10 @@ export class NotificationService {
             return;
         }
 
-        if (this._mode === 'notify' || this._mode === 'sound') {
-            vscode.window.showInformationMessage(message);
-        }
-
-        if (this._mode === 'sound') {
+        if (this._mode === 'notify') {
+            if (!this.chatPanelProvider?.isVisible) {
+                vscode.window.showInformationMessage(message);
+            }
             this.playSound();
         }
     }

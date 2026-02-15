@@ -17,6 +17,10 @@ export class ChatPanelProvider extends BaseWebviewProvider {
         super(extensionUri);
     }
 
+    public get isVisible(): boolean {
+        return this._view?.visible ?? false;
+    }
+
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         context: vscode.WebviewViewResolveContext,
@@ -157,7 +161,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 }
                 break;
             }
-            
+
             case 'sendTyping':
                 await this.activityService.sendTypingSignal();
                 break;
