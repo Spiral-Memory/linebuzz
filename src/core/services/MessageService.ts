@@ -79,6 +79,14 @@ export class MessageService {
                     ...message,
                     userType: message.u.user_id === session?.user_id ? 'me' : 'other'
                 } as MessageResponse;
+
+                if (enrichedMessage.userType === 'other') {
+                    const notificationService = Container.get("NotificationService");
+                    const sender = message.u.display_name || message.u.username || 'User';
+                    const text = `${sender}: ${message.content}`;
+                    notificationService.notify(text);
+                }
+
                 postMessage(enrichedMessage);
             });
 

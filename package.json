@@ -56,6 +56,16 @@
         "command": "linebuzz.deactivateCLens",
         "title": "Hide Inline Discussions",
         "icon": "$(coffee)"
+      },
+      {
+        "command": "linebuzz.stepMuted",
+        "title": "Notifications: Muted",
+        "icon": "$(bell-slash)"
+      },
+      {
+        "command": "linebuzz.stepNotify",
+        "title": "Notifications: Notify",
+        "icon": "$(bell-dot)"
       }
     ],
     "keybindings": [
@@ -114,6 +124,16 @@
           "command": "linebuzz.deactivateCLens",
           "when": "view == linebuzz.chatpanel && linebuzz.isCLensActive",
           "group": "navigation"
+        },
+        {
+          "command": "linebuzz.stepMuted",
+          "when": "view == linebuzz.chatpanel && (!linebuzz.notificationMode || linebuzz.notificationMode == 'mute')",
+          "group": "navigation@1"
+        },
+        {
+          "command": "linebuzz.stepNotify",
+          "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'notify'",
+          "group": "navigation@1"
         }
       ]
     },
@@ -156,6 +176,7 @@
     "@types/he": "^1.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/play-sound": "^1.1.2",
     "@types/vscode": "^1.102.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
@@ -184,6 +205,7 @@
     "lru-cache": "^11.2.4",
     "marked": "^17.0.1",
     "normalize-url": "^8.1.1",
+    "play-sound": "^1.1.6",
     "seti-file-icons": "^0.0.8"
   }
 }

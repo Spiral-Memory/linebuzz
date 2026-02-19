@@ -74,9 +74,9 @@ export const showDiffCommand = async (args: any) => {
 
         const uri = vscode.Uri.parse(currentFileUri);
         const doc = await vscode.workspace.openTextDocument(uri);
-        let selection = new vscode.Range(liveStartLine, 0, liveEndLine, 0);
-        let fetchedContent: string | null = null;
+        const selection = new vscode.Range(liveStartLine, 0, liveEndLine, 0);
 
+        let fetchedContent: string | null = null;
         if (commit_sha && filePath) {
             try {
                 const gitExtension = vscode.extensions.getExtension('vscode.git');
@@ -88,7 +88,6 @@ export const showDiffCommand = async (args: any) => {
                     if (remoteUrl) {
                         repo = findRepositoryByRemote(api, remoteUrl);
                     }
-
                     if (!repo) {
                         repo = api.repositories.find((r: any) =>
                             uri.fsPath.toLowerCase().startsWith(r.rootUri.fsPath.toLowerCase())
@@ -124,36 +123,37 @@ export const showDiffCommand = async (args: any) => {
             const rightUri = ReadOnlyContentProvider.registerContent(`local-current/${uniqueKey}/${filename}`, fullCurrentContent);
 
             await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `${filename}: ${commit_sha.substring(0, 8)} ↔ Current`, { selection });
-            return;
         }
 
-        const startIdx = Math.max(0, startLine - 1);
-        const endIdx = Math.max(0, endLine - 1);
-        const safeStartIdx = Math.min(startIdx, doc.lineCount - 1);
-        const safeEndIdx = Math.min(endIdx, doc.lineCount - 1);
+        else {
+            const startIdx = Math.max(0, startLine - 1);
+            const endIdx = Math.max(0, endLine - 1);
+            const safeStartIdx = Math.min(startIdx, doc.lineCount - 1);
+            const safeEndIdx = Math.min(endIdx, doc.lineCount - 1);
 
-        const range = new vscode.Range(
-            new vscode.Position(safeStartIdx, 0),
-            doc.lineAt(safeEndIdx).range.end
-        );
+            const range = new vscode.Range(
+                new vscode.Position(safeStartIdx, 0),
+                doc.lineAt(safeEndIdx).range.end
+            );
 
-        let currentContent: string;
-        try {
-            currentContent = dedent(doc.getText(range));
-        } catch (e) {
-            currentContent = doc.getText(range);
+            let currentContent: string;
+            try {
+                currentContent = dedent(doc.getText(range));
+            } catch (e) {
+                currentContent = doc.getText(range);
+            }
+
+            const filename = uri.path.split('/').pop() || 'file';
+            const leftTitle = `Snapshot`;
+            const rightTitle = `Current (L${startLine}-L${endLine})`;
+            const title = `${filename}: ${leftTitle} ↔ ${rightTitle}`;
+
+            const uniqueKey = `${encodeURIComponent(currentFileUri)}-${Date.now()}`;
+            const leftUri = ReadOnlyContentProvider.registerContent(`original/${uniqueKey}/${filename}`, originalContent);
+            const rightUri = ReadOnlyContentProvider.registerContent(`current/${uniqueKey}/${filename}`, currentContent);
+
+            await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, { selection });
         }
-
-        const filename = uri.path.split('/').pop() || 'file';
-        const leftTitle = `Snapshot`;
-        const rightTitle = `Current (L${startLine}-L${endLine})`;
-        const title = `${filename}: ${leftTitle} ↔ ${rightTitle}`;
-
-        const uniqueKey = `${encodeURIComponent(currentFileUri)}-${Date.now()}`;
-        const leftUri = ReadOnlyContentProvider.registerContent(`original/${uniqueKey}/${filename}`, originalContent);
-        const rightUri = ReadOnlyContentProvider.registerContent(`current/${uniqueKey}/${filename}`, currentContent);
-
-        await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, { selection });
 
     } catch (e) {
         logger.error("CLensCommand", "Failed to show diff", e);

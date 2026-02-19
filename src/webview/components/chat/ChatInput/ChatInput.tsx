@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'preact/hooks';
 import { vscode } from '../../../utils/vscode';
 import { Snippet } from '../../../../types/IAttachment';
 import { CodeInput } from './CodeInput';
-import { MessageRequest } from '../../../../types/IMessage';
+import { MessageRequest, MessageResponse } from '../../../../types/IMessage';
 import styles from './ChatInput.module.css';
 
 interface ChatInputProps {
@@ -10,10 +10,12 @@ interface ChatInputProps {
     onClearSnippet?: () => void;
     onRemoveSnippet?: (index: number) => void;
     onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
-    jumpToBottom?: () => void;
+    onTyping?: () => void;
+    replyingTo?: MessageResponse | null;
+    onCancelReply?: () => void;
 }
 
-export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, jumpToBottom }: ChatInputProps) => {
+export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply }: ChatInputProps) => {
     const [value, setValue] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,6 +36,9 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
     const handleInput = (e: any) => {
         setValue(e.target.value);
         adjustHeight();
+        if (onTyping) {
+            onTyping();
+        }
     };
 
     const adjustHeight = () => {
@@ -49,12 +54,17 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
         if (!value.trim() && (!stagedSnippet || stagedSnippet.length === 0)) return;
         const messageRequest: MessageRequest = {
             content: value,
-            attachments: stagedSnippet || []
+            attachments: stagedSnippet || [],
+            quoted_id: replyingTo?.message_id
         };
         vscode.postMessage({
             command: 'sendMessage',
             body: messageRequest
         });
+
+        if (onCancelReply) {
+            onCancelReply();
+        }
 
         setValue('');
         if (onClearSnippet) {
@@ -79,6 +89,27 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
 
     return (
         <div class={styles['input-container']}>
+            {replyingTo && (
+                <div class={styles['reply-preview']}>
+                    <div class={styles['reply-content']}>
+                        <div class={styles['reply-to-text']}>
+                            <svg class={styles['reply-icon-small']} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 14L4 9L9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M4 9H14C18.4183 9 22 12.5817 22 17V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Replying to {replyingTo.u?.display_name || replyingTo.u?.username || 'Unknown'}
+                        </div>
+                        <div class={styles['reply-message-text']}>
+                            {replyingTo.content}
+                        </div>
+                    </div>
+                    <button class={styles['cancel-reply-button']} onClick={onCancelReply} aria-label="Cancel reply">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+            )}
             <textarea
                 ref={textareaRef}
                 class={styles['chat-input']}

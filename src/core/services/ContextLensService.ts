@@ -151,19 +151,21 @@ export class ContextLensService {
 
             if (d.discussion.content) {
                 const filename = path.basename(uri.fsPath);
-                md.appendMarkdown(`[\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\`](command:clens.highlightCode "Reveal code")`);
-                md.appendMarkdown('\n\n');
+                md.appendMarkdown(`\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\``);
 
                 if (d.discussion.message.content) {
                     const content = d.discussion.message.content.length > 100
                         ? d.discussion.message.content.substring(0, 100) + '...'
                         : d.discussion.message.content;
-                    md.appendMarkdown(`${content}\n\n`);
+                    md.appendMarkdown(`&nbsp;&nbsp;${content}\n\n`);
                 }
 
 
                 if (d.relocationStatus?.success === false) {
-                    md.appendMarkdown(`⚠️ **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                    md.appendMarkdown(`$(search-stop) **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                }
+                else if (d.relocationStatus?.reason !== 'exact') {
+                    md.appendMarkdown(`$(search-fuzzy) **Partial match:** Review the diff to see the changes.\n\n`);
                 }
 
                 const diffArgs = encodeURIComponent(JSON.stringify({
