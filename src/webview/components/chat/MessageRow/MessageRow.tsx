@@ -14,9 +14,10 @@ interface MessageRowProps {
     onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
     isHighlighted?: boolean;
     onReply?: (message: MessageResponse) => void;
+    onQuoteClick?: (messageId: string) => void;
 }
 
-export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply }: MessageRowProps) => {
+export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQuoteClick }: MessageRowProps) => {
     const displayName = message.u?.display_name || message.u?.username || 'Unknown';
     const avatarUrl = message.u?.avatar_url;
     const initials = getInitials(displayName);
@@ -58,7 +59,11 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply }: M
                     <span class={styles['message-time']}>{formatTime(message.created_at)}</span>
                 </div>
                 {message.quoted_message && (
-                    <div class={styles['quoted-message']}>
+                    <div
+                        class={styles['quoted-message']}
+                        onClick={() => message.quoted_id && onQuoteClick?.(message.quoted_id)}
+                        role="button"
+                    >
                         <div class={styles['quoted-user']}>
                             {message.quoted_message.u.display_name || message.quoted_message.u.username}
                         </div>
