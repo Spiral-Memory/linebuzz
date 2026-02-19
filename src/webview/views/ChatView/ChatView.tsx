@@ -263,6 +263,33 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         return () => observer.disconnect();
     }, [messages.length > 0]);
 
+    const handleQuoteClick = (messageId: string) => {
+        const cacheIndex = cachedMessagesRef.current.findIndex(m => m.message_id === messageId);
+
+        if (cacheIndex !== -1) {
+            const half = Math.floor(MAX_DOM_MESSAGE / 2);
+            const start = Math.max(0, cacheIndex - half);
+            const end = Math.min(cachedMessagesRef.current.length, start + MAX_DOM_MESSAGE);
+            const newSlice = cachedMessagesRef.current.slice(start, end);
+
+            setMessages(newSlice);
+            setHasOlder(true);
+            setHasNewer(true);
+            setUnreadCount(0);
+            jumpRequestRef.current = messageId;
+            return;
+        }
+
+        setIsLoading(true);
+        vscode.postMessage({
+            command: 'getMessages',
+            limit: FETCH_LIMIT,
+            anchorId: messageId,
+            direction: 'around',
+            intent: 'jump-to-message'
+        });
+    };
+
     const handleJumpToBottom = () => {
         if (hasNewer) {
             setIsLoading(true);
@@ -493,6 +520,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                                 onOpenSnippet={onOpenSnippet}
                                 isHighlighted={msg.message_id === highlightedMessageId}
                                 onReply={handleReply}
+                                onQuoteClick={handleQuoteClick}
                             />
                         ))}
                         <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
