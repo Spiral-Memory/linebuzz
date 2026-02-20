@@ -12,6 +12,7 @@ export class SupabaseMessageRepository implements IMessageRepository {
             p_team_id: teamId,
             p_content: message.content,
             p_attachments: message.attachments,
+            p_quoted_id: message.quoted_id,
             p_parent_id: null,
         });
         if (error) {
