@@ -36,6 +36,7 @@ export class ContextLensService {
         allowStale: false
     });
     private relocator = new RelocatorEngine();
+    private snippetSubscription?: { unsubscribe: () => void };
 
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
@@ -47,6 +48,9 @@ export class ContextLensService {
         context.subscriptions.push(
             vscode.workspace.onDidChangeTextDocument(e => this.updateLiveRanges(e))
         );
+        if (this._isCLensActive) {
+            this.startSnippetSubscription();
+        }
     }
 
     public toggleCodeLens(value: boolean) {
@@ -55,6 +59,9 @@ export class ContextLensService {
             vscode.window.visibleTextEditors.forEach(editor => {
                 editor.setDecorations(this.buzzDecorationType, []);
             });
+            this.stopSnippetSubscription();
+        } else {
+            this.startSnippetSubscription();
         }
         this._isCLensActive = value;
         Storage.setGlobal("clens.active", value);
@@ -131,6 +138,26 @@ export class ContextLensService {
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
+    public getDiffArgs(uriStr: string, discussionId: string): any | undefined {
+        const trackedDiscussions = this.cache.get(uriStr);
+        const td = trackedDiscussions?.find(t => t.discussion.id === discussionId);
+        if (!td) return undefined;
+
+        return {
+            originalContent: td.discussion.content,
+            currentFileUri: uriStr,
+            startLine: td.discussion.start_line,
+            endLine: td.discussion.end_line,
+            liveStartLine: td.liveRange.start.line,
+            liveEndLine: td.liveRange.end.line,
+            ref: td.discussion.ref,
+            commit_sha: td.discussion.commit_sha,
+            patch: td.discussion.patch,
+            filePath: td.discussion.file_path,
+            remoteUrl: td.discussion.remote_url
+        };
+    }
+
     private createMarkdownPopup(discussionList: TrackedDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
@@ -168,20 +195,11 @@ export class ContextLensService {
                     md.appendMarkdown(`$(search-fuzzy) **Partial match:** Review the diff to see the changes.\n\n`);
                 }
 
-                const diffArgs = encodeURIComponent(JSON.stringify({
-                    originalContent: d.discussion.content,
-                    currentFileUri: uri.toString(),
-                    startLine: d.discussion.start_line,
-                    endLine: d.discussion.end_line,
-                    liveStartLine: d.liveRange.start.line,
-                    liveEndLine: d.liveRange.end.line,
-                    ref: d.discussion.ref,
-                    commit_sha: d.discussion.commit_sha,
-                    patch: d.discussion.patch,
-                    filePath: d.discussion.file_path,
-                    remoteUrl: d.discussion.remote_url
-                }));
-                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
+                const diffReference = {
+                    filePath: uri.toString(),
+                    discussion_id: d.discussion.id
+                };
+                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${encodeURIComponent(JSON.stringify(diffReference))} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
                 md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.discussion.message.message_id))} "View Discussion")`);
 
@@ -377,8 +395,54 @@ export class ContextLensService {
         };
     }
 
+    private async startSnippetSubscription() {
+        if (this.snippetSubscription) return;
+
+        const teamService = Container.get("TeamService");
+        const authService = Container.get("AuthService");
+        const team = teamService.getTeam();
+        const session = await authService.getSession();
+
+        if (!team || !session) return;
+
+        this.snippetSubscription = await this.codeRepo.subscribeToCodeSnippets(team.id, session.user_id, (discussion) => {
+            this.handleNewSnippet(discussion);
+        });
+    }
+
+    private stopSnippetSubscription() {
+        if (this.snippetSubscription) {
+            this.snippetSubscription.unsubscribe();
+            this.snippetSubscription = undefined;
+        }
+    }
+
+    private handleNewSnippet(discussion: CodeDiscussion) {
+        for (const editor of vscode.window.visibleTextEditors) {
+            const uriStr = editor.document.uri.toString();
+            if (this.cache.has(uriStr)) {
+                this.getFileContext(editor.document).then(context => {
+                    if (context && context.file_path === discussion.file_path && context.remote_url === discussion.remote_url) {
+                        const trackedDiscussions = this.cache.get(uriStr) || [];
+                        if (trackedDiscussions.some(td => td.discussion.id === discussion.id)) {
+                            return;
+                        }
+
+                        const [newTrackedDiscussion] = this.alignDiscussions(editor.document, [discussion]);
+                        if (newTrackedDiscussion) {
+                            trackedDiscussions.push(newTrackedDiscussion);
+                            this.cache.set(uriStr, trackedDiscussions);
+                            vscode.commands.executeCommand('linebuzz.refreshCLens');
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     public dispose() {
         this.cache.clear();
         this.buzzDecorationType.dispose();
+        this.stopSnippetSubscription();
     }
 }

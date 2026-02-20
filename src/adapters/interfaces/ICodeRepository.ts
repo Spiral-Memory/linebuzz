@@ -10,4 +10,5 @@ export interface CodeDiscussion extends Snippet {
 
 export interface ICodeRepository {
     getDiscussionsByFile(file_path: string, remote_url: string, team_id: string): Promise<CodeDiscussion[]>;
+    subscribeToCodeSnippets(teamId: string, userId: string, callback: (snippet: CodeDiscussion) => void): Promise<{ unsubscribe: () => void }>;
 }
