@@ -138,6 +138,26 @@ export class ContextLensService {
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
+    public getDiffArgs(uriStr: string, discussionId: string): any | undefined {
+        const trackedDiscussions = this.cache.get(uriStr);
+        const td = trackedDiscussions?.find(t => t.discussion.id === discussionId);
+        if (!td) return undefined;
+
+        return {
+            originalContent: td.discussion.content,
+            currentFileUri: uriStr,
+            startLine: td.discussion.start_line,
+            endLine: td.discussion.end_line,
+            liveStartLine: td.liveRange.start.line,
+            liveEndLine: td.liveRange.end.line,
+            ref: td.discussion.ref,
+            commit_sha: td.discussion.commit_sha,
+            patch: td.discussion.patch,
+            filePath: td.discussion.file_path,
+            remoteUrl: td.discussion.remote_url
+        };
+    }
+
     private createMarkdownPopup(discussionList: TrackedDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
@@ -175,20 +195,11 @@ export class ContextLensService {
                     md.appendMarkdown(`$(search-fuzzy) **Partial match:** Review the diff to see the changes.\n\n`);
                 }
 
-                const diffArgs = encodeURIComponent(JSON.stringify({
-                    originalContent: d.discussion.content,
-                    currentFileUri: uri.toString(),
-                    startLine: d.discussion.start_line,
-                    endLine: d.discussion.end_line,
-                    liveStartLine: d.liveRange.start.line,
-                    liveEndLine: d.liveRange.end.line,
-                    ref: d.discussion.ref,
-                    commit_sha: d.discussion.commit_sha,
-                    patch: d.discussion.patch,
-                    filePath: d.discussion.file_path,
-                    remoteUrl: d.discussion.remote_url
-                }));
-                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
+                const diffReference = {
+                    filePath: uri.toString(),
+                    discussion_id: d.discussion.id
+                };
+                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${encodeURIComponent(JSON.stringify(diffReference))} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
                 md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.discussion.message.message_id))} "View Discussion")`);
 
