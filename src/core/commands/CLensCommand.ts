@@ -66,6 +66,8 @@ export const showDiffCommand = async (diffReference: any) => {
 
         if (diffReference?.filePath && diffReference?.discussion_id) {
             diffArgs = Container.get('ContextLensService').getDiffArgs(diffReference.filePath, diffReference.discussion_id);
+        } else if (diffReference?.originalContent && diffReference?.currentFileUri) {
+            diffArgs = diffReference;
         }
 
         if (!diffArgs) {
