@@ -60,12 +60,23 @@ const applyPatch = async (content: string, patch: string, filePath: string): Pro
     }
 };
 
-export const showDiffCommand = async (args: any) => {
+export const showDiffCommand = async (diffReference: any) => {
     try {
+        let diffArgs;
+
+        if (diffReference?.filePath && diffReference?.discussion_id) {
+            diffArgs = Container.get('ContextLensService').getDiffArgs(diffReference.filePath, diffReference.discussion_id);
+        }
+
+        if (!diffArgs) {
+            logger.error("CLensCommand", "Diff arguments not found");
+            return;
+        }
+
         const { originalContent, currentFileUri,
             startLine, endLine,
             commit_sha, filePath, patch, remoteUrl,
-            liveStartLine, liveEndLine } = args;
+            liveStartLine, liveEndLine } = diffArgs;
 
         if (!originalContent || !currentFileUri || startLine === undefined || endLine === undefined) {
             logger.error("CLensCommand", "Missing arguments");
