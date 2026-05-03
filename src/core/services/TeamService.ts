@@ -12,11 +12,16 @@ export class TeamService {
     constructor(private teamRepo: ITeamRepository) { }
 
     public async initialize() {
-        const storedTeam = Storage.getGlobal<TeamInfo>("currentTeam");
-        if (storedTeam) {
-            this.currentTeam = storedTeam;
-            await this.updateContext(true);
-            logger.info("TeamService", `Restored team: ${storedTeam.name}`);
+        const storedInviteCode = await Storage.getSecret('teamInviteCode');
+        if (storedInviteCode) {
+            try {
+                logger.info("TeamService", "Auto-rejoining team with stored invite code");
+                await this.joinTeam(storedInviteCode, true);
+            } catch (error) {
+                logger.error("TeamService", "Failed to auto-rejoin team", error);
+                await Storage.deleteSecret('teamInviteCode');
+                await this.updateContext(false);
+            }
         } else {
             await this.updateContext(false);
         }
@@ -39,18 +44,21 @@ export class TeamService {
                 await vscode.env.clipboard.writeText(`Join my team '${team.name}' on LineBuzz using this invite code: ${team.invite_code!}`);
                 vscode.window.showInformationMessage("All set. Invite code is ready to share.");
             }
-            this.setTeam(team);
+            await this.setTeam(team);
         } catch (error: any) {
             logger.error("TeamService", "Error creating team", error);
             vscode.window.showErrorMessage("Failed to create team. Please try again.");
         }
     }
 
-    public async joinTeam(inviteCode: string): Promise<void> {
+    public async joinTeam(inviteCode: string, autoJoin: boolean = false): Promise<void> {
         try {
             const team = await this.teamRepo.joinTeam(inviteCode);
-            this.setTeam(team);
-            vscode.window.showInformationMessage(`Joined team '${team.name}' successfully!`);
+            await this.setTeam(team);
+            await Storage.setSecret('teamInviteCode', inviteCode);
+            if (!autoJoin) {
+                vscode.window.showInformationMessage(`Joined team '${team.name}' successfully!`);
+            }
         } catch (error: any) {
             logger.error("TeamService", "Error joining team", error);
             vscode.window.showErrorMessage("Failed to join team. Please try again.");
@@ -60,6 +68,7 @@ export class TeamService {
     public async leaveTeam(showNotification: boolean = true): Promise<void> {
         this.currentTeam = undefined;
         Storage.deleteGlobal("currentTeam");
+        await Storage.deleteSecret("teamInviteCode");
         await this.updateContext(false);
         this._onDidChangeTeam.fire(undefined);
         if (showNotification) {
@@ -67,15 +76,21 @@ export class TeamService {
         }
     }
 
-    private setTeam(team: TeamInfo) {
+    private async setTeam(team: TeamInfo) {
         this.currentTeam = team;
-        Storage.setGlobal("currentTeam", team);
-        this.updateContext(true);
+        Storage.setGlobal("currentTeam", team);        
+        if (team.invite_code) {
+            await Storage.setSecret('teamInviteCode', team.invite_code);
+        }
+        
+        await this.updateContext(true, team);
         this._onDidChangeTeam.fire(team);
     }
 
-    private async updateContext(hasTeam: boolean) {
+    private async updateContext(hasTeam: boolean, team?: TeamInfo) {
         await vscode.commands.executeCommand('setContext', 'linebuzz.hasTeam', hasTeam);
+        const isAdmin = team?.role === 'admin';
+        await vscode.commands.executeCommand('setContext', 'linebuzz.isAdmin', isAdmin);
     }
 
     public getTeam(): TeamInfo | undefined {

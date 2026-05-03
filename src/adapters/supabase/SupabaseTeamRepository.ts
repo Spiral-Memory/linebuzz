@@ -26,7 +26,8 @@ export class SupabaseTeamRepository implements ITeamRepository {
             return {
                 id: response.team_id,
                 name: response.team_name,
-                invite_code: response.invite_code
+                invite_code: response.invite_code,
+                role: response.role
             };
         }
 
@@ -56,6 +57,7 @@ export class SupabaseTeamRepository implements ITeamRepository {
             return {
                 id: response.team_id,
                 name: response.team_name,
+                role: response.role
             };
         }
 
@@ -63,7 +65,43 @@ export class SupabaseTeamRepository implements ITeamRepository {
             return {
                 id: response.team_id,
                 name: response.team_name,
+                role: response.role
             };
+        }
+
+        throw new Error(`Unexpected response status: ${response.status}`);
+    }
+
+    async generateSlackOAuthUrl(teamId: string): Promise<{ url: string }> {
+        const supabase = SupabaseClient.getInstance().client;
+        logger.info("SupabaseTeamRepository", `Generating Slack OAuth URL for team: ${teamId}`);
+
+        const { data, error } = await supabase.rpc('get_slack_install_url', {
+            p_team_id: teamId
+        });
+
+        if (error) {
+            logger.error("SupabaseTeamRepository", "RPC call failed", error);
+            throw new Error(`RPC call failed: ${error.message}`);
+        }
+
+        const response = data as any;
+
+        if (response.status === 'error') {
+            switch (response.code) {
+                case 'UNAUTH':
+                    throw new Error("Authentication is required");
+                case 'CONFIG_ERROR':
+                    throw new Error("Slack configuration not found");
+                case 'FORBIDDEN':
+                    throw new Error("Only team admins can add Slack");
+                default:
+                    throw new Error(response.message || "Unknown error occurred");
+            }
+        }
+
+        if (response.status === 'success' && response.code === 'URL_GENERATED') {
+            return { url: response.url };
         }
 
         throw new Error(`Unexpected response status: ${response.status}`);

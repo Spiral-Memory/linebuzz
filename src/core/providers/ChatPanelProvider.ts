@@ -165,6 +165,12 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             case 'sendTyping':
                 await this.activityService.sendTypingSignal();
                 break;
+
+            case 'openExternal':
+                if (data.url) {
+                    await vscode.env.openExternal(vscode.Uri.parse(data.url));
+                }
+                break;
         }
     }
 

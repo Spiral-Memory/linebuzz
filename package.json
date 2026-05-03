@@ -66,6 +66,11 @@
         "command": "linebuzz.stepNotify",
         "title": "Notifications: Notify",
         "icon": "$(bell-dot)"
+      },
+      {
+        "command": "linebuzz.openSlack",
+        "title": "Connect Slack",
+        "icon": "$(symbol-numeric)"
       }
     ],
     "keybindings": [
@@ -134,6 +139,11 @@
           "command": "linebuzz.stepNotify",
           "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'notify'",
           "group": "navigation@1"
+        },
+        {
+          "command": "linebuzz.openSlack",
+          "when": "view == linebuzz.chatpanel && linebuzz.isAdmin",
+          "group": "navigation@2"
         }
       ]
     },
