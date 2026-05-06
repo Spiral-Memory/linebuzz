@@ -9,4 +9,5 @@ export interface ITeamRepository {
     createTeam(name: string): Promise<TeamInfo>;
     joinTeam(inviteCode: string): Promise<TeamInfo>;
     generateSlackOAuthUrl(teamId: string): Promise<{ url: string }>;
+    listenForSlackIntegration(teamId: string): Promise<{ unsubscribe: () => void }>;
 }

@@ -5,6 +5,7 @@ import { logger } from "../utils/logger";
 
 export class TeamService {
     private currentTeam: TeamInfo | undefined;
+    private integrationSubscription: { unsubscribe: () => void } | undefined;
 
     private _onDidChangeTeam = new vscode.EventEmitter<TeamInfo | undefined>();
     public readonly onDidChangeTeam = this._onDidChangeTeam.event;
@@ -67,10 +68,17 @@ export class TeamService {
 
     public async leaveTeam(showNotification: boolean = true): Promise<void> {
         this.currentTeam = undefined;
+        
+        if (this.integrationSubscription) {
+            this.integrationSubscription.unsubscribe();
+            this.integrationSubscription = undefined;
+            logger.info("TeamService", "Unsubscribed from integration changes");
+        }
+        
+        this._onDidChangeTeam.fire(undefined);
         Storage.deleteGlobal("currentTeam");
         await Storage.deleteSecret("teamInviteCode");
         await this.updateContext(false);
-        this._onDidChangeTeam.fire(undefined);
         if (showNotification) {
             vscode.window.showInformationMessage("You have left the team.");
         }
@@ -81,6 +89,16 @@ export class TeamService {
         Storage.setGlobal("currentTeam", team);        
         if (team.invite_code) {
             await Storage.setSecret('teamInviteCode', team.invite_code);
+        }
+        
+        try {
+            if (this.integrationSubscription) {
+                this.integrationSubscription.unsubscribe();
+            }
+            this.integrationSubscription = await this.teamRepo.listenForSlackIntegration(team.id);
+            logger.info("TeamService", `Started listening for Slack integration changes for team: ${team.id}`);
+        } catch (error) {
+            logger.error("TeamService", "Failed to subscribe to integration changes", error);
         }
         
         await this.updateContext(true, team);
