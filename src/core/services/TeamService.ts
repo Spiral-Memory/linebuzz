@@ -2,15 +2,19 @@ import * as vscode from "vscode";
 import { ITeamRepository, TeamInfo } from "../../adapters/interfaces/ITeamRepository";
 import { Storage } from "../platform/storage";
 import { logger } from "../utils/logger";
+import { SlackService } from "./SlackService";
 
 export class TeamService {
     private currentTeam: TeamInfo | undefined;
     private integrationSubscription: { unsubscribe: () => void } | undefined;
+    private slackService: SlackService;
 
     private _onDidChangeTeam = new vscode.EventEmitter<TeamInfo | undefined>();
     public readonly onDidChangeTeam = this._onDidChangeTeam.event;
 
-    constructor(private teamRepo: ITeamRepository) { }
+    constructor(private teamRepo: ITeamRepository) {
+        this.slackService = new SlackService(teamRepo);
+    }
 
     public async initialize() {
         const storedInviteCode = await Storage.getSecret('teamInviteCode');
@@ -95,7 +99,14 @@ export class TeamService {
             if (this.integrationSubscription) {
                 this.integrationSubscription.unsubscribe();
             }
-            this.integrationSubscription = await this.teamRepo.listenForSlackIntegration(team.id);
+            this.integrationSubscription = await this.slackService.listenForSlackIntegration(team.id);
+            
+            if (this.teamRepo.onSlackConnected) {
+                this.teamRepo.onSlackConnected(() => {
+                    this.slackService.showSlackConnectionNotification();
+                });
+            }
+            
             logger.info("TeamService", `Started listening for Slack integration changes for team: ${team.id}`);
         } catch (error) {
             logger.error("TeamService", "Failed to subscribe to integration changes", error);

@@ -5,6 +5,12 @@ import * as vscode from "vscode";
 
 export class SupabaseTeamRepository implements ITeamRepository {
     private integrationSubscriptions: Map<string, any> = new Map();
+    private _onSlackConnectedEvent = new vscode.EventEmitter<void>();
+    public readonly onSlackConnectedEvent = this._onSlackConnectedEvent.event;
+
+    public onSlackConnected(callback: () => void): void {
+        this._onSlackConnectedEvent.event(callback);
+    }
 
     async createTeam(name: string): Promise<TeamInfo> {
         const supabase = SupabaseClient.getInstance().client;
@@ -75,7 +81,7 @@ export class SupabaseTeamRepository implements ITeamRepository {
         throw new Error(`Unexpected response status: ${response.status}`);
     }
 
-    async generateSlackOAuthUrl(teamId: string): Promise<{ url: string }> {
+    async generateSlackOAuthUrl(teamId: string): Promise<{ url: string } | { settings: any }> {
         const supabase = SupabaseClient.getInstance().client;
         logger.info("SupabaseTeamRepository", `Generating Slack OAuth URL for team: ${teamId}`);
 
@@ -103,8 +109,15 @@ export class SupabaseTeamRepository implements ITeamRepository {
             }
         }
 
-        if (response.status === 'success' && response.code === 'URL_GENERATED') {
-            return { url: response.url };
+        if (response.status === 'success') {
+            switch (response.code) {
+                case 'URL_GENERATED':
+                    return { url: response.url };
+                case 'ALREADY_CONNECTED':
+                    return { settings: response.settings };
+                default:
+                    throw new Error(response.message || "Unknown error occurred");
+            }
         }
 
         throw new Error(`Unexpected response status: ${response.status}`);
@@ -123,7 +136,7 @@ export class SupabaseTeamRepository implements ITeamRepository {
                 .on(
                     'postgres_changes',
                     {
-                        event: '*',
+                        event: 'INSERT',
                         schema: 'public',
                         table: 'team_integrations',
                         filter: `team_id=eq.${teamId}`
@@ -135,9 +148,10 @@ export class SupabaseTeamRepository implements ITeamRepository {
                             return;
                         }
 
-                        if (payload.new.provider === 'slack' &&
-                            payload.new.access_token !== null) {
-                            this.showSlackConnectionNotification();
+                        if (payload.new.provider === 'slack') {
+                            if (payload.new.access_token !== null) {
+                                this._onSlackConnectedEvent.fire();
+                            }
                         }
                     }
                 )
@@ -161,14 +175,7 @@ export class SupabaseTeamRepository implements ITeamRepository {
         }
     }
 
-    private showSlackConnectionNotification(): void {
-        vscode.window.showInformationMessage(
-            'Slack successfully connected! Your team can now use Slack integration features.',
-            'OK'
-        ).then(() => {
-            logger.info("SupabaseTeamRepository", "Slack connection notification shown");
-        });
-    }
+
 
     unsubscribeAllIntegrations(): void {
         for (const [teamId, channel] of this.integrationSubscriptions) {
@@ -176,6 +183,43 @@ export class SupabaseTeamRepository implements ITeamRepository {
             channel.unsubscribe();
         }
         this.integrationSubscriptions.clear();
+    }
+
+    public async updateActiveChannel(teamId: string, channelId: string): Promise<void> {
+        try {
+            const supabase = SupabaseClient.getInstance().client;
+            const { error } = await supabase.rpc('set_slack_channel', {
+                p_team_id: teamId,
+                p_channel_id: channelId
+            });
+
+            if (error) {
+                throw new Error(`Failed to update active channel: ${error.message}`);
+            }
+
+            logger.info("SupabaseTeamRepository", `Active channel updated to ${channelId} for team ${teamId}`);
+        } catch (error: any) {
+            logger.error("SupabaseTeamRepository", "Error updating active channel", error);
+            throw error;
+        }
+    }
+
+    public async disconnectSlack(teamId: string): Promise<void> {
+        try {
+            const supabase = SupabaseClient.getInstance().client;
+            const { error } = await supabase.rpc('disconnect_slack', {
+                p_team_id: teamId
+            });
+
+            if (error) {
+                throw new Error(`Failed to disconnect Slack: ${error.message}`);
+            }
+
+            logger.info("SupabaseTeamRepository", `Slack integration disconnected for team ${teamId}`);
+        } catch (error: any) {
+            logger.error("SupabaseTeamRepository", "Error disconnecting Slack", error);
+            throw error;
+        }
     }
 
 }

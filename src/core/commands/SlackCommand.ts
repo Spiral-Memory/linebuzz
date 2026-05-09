@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { Container } from "../services/ServiceContainer";
+import { SlackService } from "../services/SlackService";
 
 export async function openSlackCommand() {
     const teamService = Container.get("TeamService");
@@ -15,27 +16,22 @@ export async function openSlackCommand() {
         return;
     }
 
-    await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: "Connecting Slack to your team workspace...",
-            cancellable: false
-        },
-        async () => {
-            try {
-                const teamRepo = (teamService as any).teamRepo;
-                const { url } = await teamRepo.generateSlackOAuthUrl(currentTeam.id);
+    try {
+        const teamRepo = (teamService as any).teamRepo;
+        const slackService = new SlackService(teamRepo);
+        const result = await slackService.generateSlackOAuthUrl(currentTeam.id);
 
-                await vscode.env.openExternal(vscode.Uri.parse(url));
-
-                vscode.window.showInformationMessage(
-                    "Slack connection URL generated. Please open the link to complete the authorization."
-                );
-
-            } catch (error: any) {
-                const errorMessage = error.message || "Failed to connect Slack";
-                vscode.window.showErrorMessage(`Slack connection failed: ${errorMessage}`);
-            }
+        if ('url' in result) {
+            await vscode.env.openExternal(vscode.Uri.parse(result.url));
+            vscode.window.showInformationMessage(
+                "Slack connection URL generated. Please open the link to complete the authorization."
+            );
+        } else if ('settings' in result) {
+            await slackService.showSlackChannelDialog();
         }
-    );
+
+    } catch (error: any) {
+        const errorMessage = error.message || "Failed to connect Slack";
+        vscode.window.showErrorMessage(`Slack connection failed: ${errorMessage}`);
+    }
 }
