@@ -511,7 +511,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             ) : (
                 <>
                     <div class={styles['message-list']} ref={messageListRef} onScroll={onScroll}>
-                        <div ref={topSentinelRef} style={{ height: '40px', width: '100%' }} />
+                        <div ref={topSentinelRef} style={{ height: hasOlder ? '40px' : '0px', width: '100%' }} />
                         {isLoading && <LoadingSpinner />}
                         {messages.map((msg) => (
                             <MessageRow
@@ -523,7 +523,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                                 onQuoteClick={handleQuoteClick}
                             />
                         ))}
-                        <div ref={bottomSentinelRef} style={{ height: '40px', width: '100%' }} />
+                        <div ref={bottomSentinelRef} style={{ height: hasNewer ? '40px' : '0px', width: '100%' }} />
                         <div ref={messagesEndRef} />
                     </div>
                     {(unreadCount > 0 || showScrollButton) && (
