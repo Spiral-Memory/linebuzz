@@ -142,7 +142,7 @@ export class SupabaseTeamRepository implements ITeamRepository {
                         filter: `team_id=eq.${teamId}`
                     },
                     async (payload: any) => {
-                        logger.info("SupabaseTeamRepository", 'Integration change detected', payload);
+                        logger.debug("SupabaseTeamRepository", 'Integration change detected', payload);
 
                         if (!payload.new) {
                             return;

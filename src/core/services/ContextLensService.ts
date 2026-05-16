@@ -292,6 +292,7 @@ export class ContextLensService {
 
         const key = event.document.uri.toString();
         const trackedDiscussions = this.cache.get(key);
+        logger.debug('ContextLensService', `Tracked discussions for file ${key}: ${JSON.stringify(trackedDiscussions)}`);
 
         if (!trackedDiscussions || event.contentChanges.length === 0) return;
 
@@ -301,8 +302,10 @@ export class ContextLensService {
         }
 
         const changes = [...event.contentChanges].sort(
-            (a, b) => a.rangeOffset - b.rangeOffset
+            (a, b) => b.rangeOffset - a.rangeOffset
         );
+
+        logger.debug('ContextLensService', `Changes for file ${key}: ${JSON.stringify(changes)}`);
 
         for (const change of changes) {
             for (const td of trackedDiscussions) {
@@ -358,7 +361,7 @@ export class ContextLensService {
         );
 
         const results = this.relocator.relocate(inputs);
-        logger.info('ContextLensService', `Relocation results: ${JSON.stringify(results)}`);
+        logger.debug('ContextLensService', `Relocation results: ${JSON.stringify(results)}`);
 
         results.forEach((result, i) => {
             const td = candidates[i];
