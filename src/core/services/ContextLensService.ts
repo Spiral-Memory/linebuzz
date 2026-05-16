@@ -336,12 +336,19 @@ export class ContextLensService {
     private alignDiscussions(document: vscode.TextDocument, discussions: CodeDiscussion[]): TrackedDiscussion[] {
         const fileContent = document.getText();
 
-        const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => ({
-            discussion: d,
-            startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
-            endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
-            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
-        }));
+        const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => {
+            const startLine = document.lineAt(d.start_line - 1);
+            const endLine = document.lineAt(d.end_line - 1);
+            const startChar = startLine.firstNonWhitespaceCharacterIndex;
+            const endChar = endLine.text.trimEnd().length;
+
+            return {
+                discussion: d,
+                startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, startChar)),
+                endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, endChar)),
+                liveRange: new vscode.Range(d.start_line - 1, startChar, d.end_line - 1, endChar)
+            };
+        });
 
         const candidates = trackedDiscussions.filter(td => td.discussion.content);
         if (!candidates.length) return trackedDiscussions;
@@ -351,6 +358,7 @@ export class ContextLensService {
         );
 
         const results = this.relocator.relocate(inputs);
+        logger.info('ContextLensService', `Relocation results: ${JSON.stringify(results)}`);
 
         results.forEach((result, i) => {
             const td = candidates[i];
@@ -360,12 +368,15 @@ export class ContextLensService {
             };
 
             if (result.success) {
-                td.startOffset = result.foundStartOffset;
-                td.endOffset = result.foundEndOffset;
-                td.liveRange = new vscode.Range(
-                    document.positionAt(result.foundStartOffset),
-                    document.positionAt(result.foundEndOffset)
-                );
+                const startLine = document.lineAt(document.positionAt(result.foundStartOffset));
+                const endLine = document.lineAt(document.positionAt(Math.max(result.foundStartOffset, result.foundEndOffset - 1)));
+                const startChar = startLine.firstNonWhitespaceCharacterIndex;
+                const endChar = endLine.text.trimEnd().length;
+
+                td.startOffset = document.offsetAt(new vscode.Position(startLine.lineNumber, startChar));
+                td.endOffset = document.offsetAt(new vscode.Position(endLine.lineNumber, endChar));
+
+                td.liveRange = new vscode.Range(startLine.lineNumber, startChar, endLine.lineNumber, endChar);
             }
         });
 

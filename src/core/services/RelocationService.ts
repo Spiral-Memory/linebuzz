@@ -55,12 +55,11 @@ export class RelocatorEngine {
     private tryExactMatch(input: RelocationInput): RelocationResult | null {
         const relativeStart = input.snapshotStartOffset - input.targetStartOffset;
         const snapshotLength = input.snapshot.length;
-        if (relativeStart >= 0 && (relativeStart + snapshotLength) <= input.targetCode.length) {
-            const candidate = input.targetCode.substring(relativeStart, relativeStart + snapshotLength + this.LOOKAHEAD_BUFFER);
-            const cleanSnapshot = input.snapshot.replace(/\s+/g, '');
-            const cleanCandidate = candidate.replace(/\s+/g, '');
 
-            if (cleanCandidate.startsWith(cleanSnapshot)) {
+        if (relativeStart >= 0 && (relativeStart + snapshotLength) <= input.targetCode.length) {
+            const candidate = input.targetCode.substring(relativeStart, relativeStart + snapshotLength);
+
+            if (candidate === input.snapshot) {
                 return {
                     success: true,
                     foundStartOffset: input.snapshotStartOffset,
