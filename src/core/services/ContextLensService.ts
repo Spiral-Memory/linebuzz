@@ -252,6 +252,34 @@ export class ContextLensService {
             remote_url: chosenRemote.fetchUrl,
         };
     }
+
+    private transformOffset(offset: number, change: vscode.TextDocumentContentChangeEvent, affinity: 'left' | 'right'): number {
+        const changeStart = change.rangeOffset;
+        const changeEnd = changeStart + change.rangeLength;
+        const insertLength = change.text.length;
+        const delta = insertLength - change.rangeLength;
+
+        // Case 1. Edit happens strictly AFTER the offset
+        if (changeStart > offset) {
+            return offset;
+        }
+
+        // Case 2. Edit happens strictly BEFORE the offset (or ends exactly on it)
+        if (changeEnd <= offset) {
+            if (changeStart === offset && change.rangeLength === 0) {
+                return affinity === 'right' ? offset + insertLength : offset;
+            }
+            return offset + delta;
+        }
+
+        // Case 3. Edit OVERLAPS the offset (Destructive edit or Boundary replacement)
+        if (affinity === 'right') {
+            return changeStart + insertLength;
+        } else {
+            return changeStart;
+        }
+    }
+
     private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
         if (event.reason === vscode.TextDocumentChangeReason.Undo ||
             event.reason === vscode.TextDocumentChangeReason.Redo ||
@@ -277,47 +305,13 @@ export class ContextLensService {
         );
 
         for (const change of changes) {
-            const changeStart = change.rangeOffset;
-            const changeEnd = change.rangeOffset + change.rangeLength;
-            const insertedEnd = changeStart + change.text.length;
-            const delta = change.text.length - change.rangeLength;
-
             for (const td of trackedDiscussions) {
-                // CASE 1:
-                // Change is strictly before the range.
-                if (changeEnd <= td.startOffset) {
-                    td.startOffset += delta;
-                    td.endOffset += delta;
-                }
 
-                // CASE 2:
-                // Change is strictly after the range.
-                else if (changeStart >= td.endOffset) {
-                    // no-op
-                }
+                // 1. Transform Start and End independently using their Affinities
+                td.startOffset = this.transformOffset(td.startOffset, change, 'right');
+                td.endOffset = this.transformOffset(td.endOffset, change, 'left');
 
-                // CASE 3:
-                // Change starts before or at the range and intersects it.
-                // Treat edit as part of the same discussion.
-                else if (changeStart <= td.startOffset && changeEnd > td.startOffset) {
-                    td.startOffset = changeStart;
-                    td.endOffset += delta;
-                }
-
-                // CASE 4:
-                // Change intersects only the end of the range.
-                else if (changeStart < td.endOffset && changeEnd >= td.endOffset) {
-                    td.endOffset = insertedEnd;
-                }
-
-                // CASE 5:
-                // Change lies strictly inside the range.
-                else if (changeStart > td.startOffset && changeEnd < td.endOffset) {
-                    td.endOffset += delta;
-                }
-
-                // CASE 6:
-                // Safety normalization after destructive edits.
+                // 2. Safety normalization (if a deletion inverted the range)
                 if (td.startOffset > td.endOffset) {
                     td.endOffset = td.startOffset;
                 }
