@@ -9,6 +9,7 @@ export class TeamService {
     private integrationSubscription: { unsubscribe: () => void } | undefined;
     private slackService: SlackService;
     private slackConnected: boolean = false;
+    private slackChannel: string | null = null;
 
     private _onDidChangeTeam = new vscode.EventEmitter<TeamInfo | undefined>();
     public readonly onDidChangeTeam = this._onDidChangeTeam.event;
@@ -77,6 +78,7 @@ export class TeamService {
     public async leaveTeam(showNotification: boolean = true): Promise<void> {
         this.currentTeam = undefined;
         this.slackConnected = false;
+        this.slackChannel = null;
         this._onDidChangeSlackIntegration.fire(false);
         
         if (this.integrationSubscription) {
@@ -103,10 +105,14 @@ export class TeamService {
 
         try {
             this.slackConnected = await this.teamRepo.isSlackConnected(team.id);
+            this.slackChannel = this.slackConnected && this.teamRepo.getSlackActiveChannel
+                ? await this.teamRepo.getSlackActiveChannel(team.id)
+                : null;
             this._onDidChangeSlackIntegration.fire(this.slackConnected);
         } catch (error) {
             logger.error("TeamService", "Failed to check initial slack connection", error);
             this.slackConnected = false;
+            this.slackChannel = null;
         }
         
         try {
@@ -116,11 +122,31 @@ export class TeamService {
             this.integrationSubscription = await this.slackService.listenForSlackIntegration(team.id);
             
             if (this.teamRepo.onSlackConnected) {
-                this.teamRepo.onSlackConnected((isConnected: boolean) => {
+                this.teamRepo.onSlackConnected(async (isConnected: boolean) => {
+                    const wasConnected = this.slackConnected;
+                    const prevChannel = this.slackChannel;
+
                     this.slackConnected = isConnected;
+                    this.slackChannel = isConnected && this.teamRepo.getSlackActiveChannel
+                        ? await this.teamRepo.getSlackActiveChannel(team.id)
+                        : null;
+
                     this._onDidChangeSlackIntegration.fire(isConnected);
+
+                    const isAdmin = this.currentTeam?.role === 'admin';
+
                     if (isConnected) {
-                        this.slackService.showSlackConnectionNotification();
+                        if (isAdmin) {
+                            if (!wasConnected) {
+                                this.slackService.showSlackConnectionNotification();
+                            }
+                        } else {
+                            if (this.slackChannel && (!wasConnected || prevChannel !== this.slackChannel)) {
+                                vscode.window.showInformationMessage(
+                                    `Slack successfully connected! Syncing to #${this.slackChannel}`
+                                );
+                            }
+                        }
                     }
                 });
             }
@@ -136,6 +162,10 @@ export class TeamService {
 
     public isSlackConnected(): boolean {
         return this.slackConnected;
+    }
+
+    public getSlackActiveChannelName(): string | null {
+        return this.slackChannel;
     }
 
     private async updateContext(hasTeam: boolean, team?: TeamInfo) {

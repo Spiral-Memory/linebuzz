@@ -198,7 +198,8 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             state: {
                 isLoggedIn: !!session,
                 hasTeam: !!team,
-                isSlackConnected: this.teamService.isSlackConnected()
+                isSlackConnected: this.teamService.isSlackConnected(),
+                slackChannel: this.teamService.getSlackActiveChannelName()
             }
         });
     }

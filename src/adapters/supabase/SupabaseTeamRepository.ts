@@ -123,7 +123,7 @@ export class SupabaseTeamRepository implements ITeamRepository {
         throw new Error(`Unexpected response status: ${response.status}`);
     }
 
-    async isSlackConnected(teamId: string): Promise<boolean> {
+    private async getSlackSettings(teamId: string): Promise<any | null> {
         try {
             const supabase = SupabaseClient.getInstance().client;
             const { data, error } = await supabase
@@ -134,15 +134,30 @@ export class SupabaseTeamRepository implements ITeamRepository {
                 .maybeSingle();
 
             if (error || !data) {
-                return false;
+                return null;
             }
-
-            const settings = data.settings as any;
-            return !!settings?.active_channel_id;
+            return data.settings;
         } catch (error: any) {
-            logger.error("SupabaseTeamRepository", "Error checking if Slack is connected", error);
-            return false;
+            logger.error("SupabaseTeamRepository", "Error fetching Slack settings", error);
+            return null;
         }
+    }
+
+    async isSlackConnected(teamId: string): Promise<boolean> {
+        const settings = await this.getSlackSettings(teamId);
+        return !!settings;
+    }
+
+    async getSlackActiveChannel(teamId: string): Promise<string | null> {
+        const settings = await this.getSlackSettings(teamId);
+        if (!settings) {
+            return null;
+        }
+
+        const activeChannelId = settings.active_channel_id;
+        const channels = settings.channels || [];
+        const activeChannel = channels.find((c: any) => c.id === activeChannelId);
+        return activeChannel ? activeChannel.name : null;
     }
 
     async listenForSlackIntegration(teamId: string): Promise<{ unsubscribe: () => void }> {

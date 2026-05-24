@@ -14,4 +14,5 @@ export interface ITeamRepository {
     updateActiveChannel(teamId: string, channelId: string): Promise<void>;
     disconnectSlack(teamId: string): Promise<void>;
     isSlackConnected(teamId: string): Promise<boolean>;
+    getSlackActiveChannel?(teamId: string): Promise<string | null>;
 }

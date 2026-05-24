@@ -14,9 +14,10 @@ interface ChatInputProps {
     replyingTo?: MessageResponse | null;
     onCancelReply?: () => void;
     isSlackConnected?: boolean;
+    slackChannel?: string | null;
 }
 
-export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply, isSlackConnected }: ChatInputProps) => {
+export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply, isSlackConnected, slackChannel }: ChatInputProps) => {
     const [value, setValue] = useState('');
     const [syncToSlack, setSyncToSlack] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,8 +139,8 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
                     ))}
                 </div>
                 <div class={styles['action-buttons']}>
-                    {isSlackConnected && (
-                        <div class={styles['slack-toggle-container']} title={syncToSlack ? "Syncing to Slack (ON)" : "Sync to Slack (OFF)"}>
+                    {slackChannel && (
+                        <div class={styles['slack-toggle-container']} title={syncToSlack ? `Sharing to #${slackChannel}` : `Send to #${slackChannel}`}>
                             <label class={styles['switch']}>
                                 <input
                                     type="checkbox"
@@ -147,8 +148,18 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
                                     onChange={(e: any) => setSyncToSlack(e.target.checked)}
                                 />
                                 <span class={`${styles['slider']} ${styles['round']}`}>
-                                    <svg class={styles['slack-icon-inside']} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523 2.528 2.528 0 0 1-2.522-2.523 2.528 2.528 0 0 1 2.522-2.52h2.52v2.52zm1.261 0a2.528 2.528 0 0 1 2.52-2.52h5.043a2.528 2.528 0 0 1 2.522 2.52v5.042a2.528 2.528 0 0 1-2.522 2.52H8.823a2.528 2.528 0 0 1-2.52-2.52v-5.042zM8.823 5.043a2.528 2.528 0 0 1-2.52-2.52 2.528 2.528 0 0 1 2.52-2.522 2.528 2.528 0 0 1 2.522 2.522v2.52h-2.522zm0 1.262a2.528 2.528 0 0 1 2.522 2.52v5.043a2.528 2.528 0 0 1-2.522 2.52H3.78a2.528 2.528 0 0 1-2.52-2.52V8.825a2.528 2.528 0 0 1 2.52-2.52h5.043zm10.135 3.78a2.528 2.528 0 0 1 2.52-2.522 2.528 2.528 0 0 1 2.522 2.522 2.528 2.528 0 0 1-2.522 2.52h-2.52v-2.52zm-1.262 0a2.528 2.528 0 0 1-2.52 2.52h-5.043a2.528 2.528 0 0 1-2.522-2.52V3.78a2.528 2.528 0 0 1 2.522-2.52h5.043a2.528 2.528 0 0 1 2.52 2.52v5.043zm-3.78 10.134a2.528 2.528 0 0 1 2.52 2.52 2.528 2.528 0 0 1-2.52 2.522 2.528 2.528 0 0 1-2.522-2.522v-2.52h2.522zm0-1.261a2.528 2.528 0 0 1-2.522-2.52v-5.043a2.528 2.528 0 0 1 2.522-2.52h5.043a2.528 2.528 0 0 1 2.52 2.52v5.043a2.528 2.528 0 0 1-2.52 2.52h-5.043z" fill="currentColor"/>
+                                    <svg class={styles['slack-icon-inside']} viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M403.198 225.109C432.661 223.412 464.022 239.591 466.419 271.352C466.818 299.816 481.5 339.966 436.955 335.372C306.918 346.458 326.394 227.606 403.198 225.109Z" fill={syncToSlack ? "#36C5F0" : "currentColor"} />
+                                        <path d="M262.273 354.546C316.904 344.958 376.829 341.063 430.862 355.845C485.194 374.621 473.509 455.021 424.57 472.099C402.398 479.79 373.833 472 353.658 476.893C318.602 474.796 282.647 476.394 248.49 466.906C192.76 448.329 213.434 361.837 262.273 354.546Z" fill={syncToSlack ? "#36C5F0" : "currentColor"} />
+
+                                        <path d="M640.301 367.929C672.66 323.584 742.473 360.638 739.577 410.875C739.077 473.197 692.536 477.392 642.298 474.696C614.733 476.493 627.617 381.112 640.301 367.929Z" fill={syncToSlack ? "#2EB67D" : "currentColor"} />
+                                        <path d="M608.739 431.748C577.478 511.847 471.91 461.71 486.192 386.604C486.392 342.659 486.392 297.715 496.279 254.769C502.871 231.398 521.648 220.612 544.819 218.914C604.144 216.317 617.927 276.242 615.93 321.585C615.83 358.339 620.424 396.192 608.739 431.748Z" fill={syncToSlack ? "#2EB67D" : "currentColor"} />
+
+                                        <path d="M635.708 617.116C601.351 617.715 565.896 620.711 532.537 610.624C453.636 582.859 500.377 472.297 574.984 486.679C617.731 487.078 660.977 485.58 703.124 493.87C750.964 501.76 758.754 567.578 724.597 595.343C700.328 617.415 666.17 614.919 635.708 617.116Z" fill={syncToSlack ? "#ECB22E" : "currentColor"} />
+                                        <path d="M525.044 628.503C648.29 617.017 636.305 734.171 556.205 739.664C528.14 740.962 495.881 726.48 492.685 695.919C492.884 660.763 474.008 624.808 525.044 628.503Z" fill={syncToSlack ? "#ECB22E" : "currentColor"} />
+
+                                        <path d="M300.726 486.383C327.093 483.486 340.776 488.98 337.78 518.443C336.881 552.101 340.377 598.543 300.826 610.827C202.948 628.705 201.35 472.3 300.726 486.383Z" fill={syncToSlack ? "#E01E5A" : "currentColor"} />
+                                        <path d="M412.784 487.978C437.853 489.177 470.712 506.755 476.705 537.217C480.899 558.19 474.807 584.757 479.401 603.334C472.809 647.878 491.087 721.087 435.556 738.066C342.572 757.341 349.164 643.883 349.763 583.359C347.566 542.81 362.947 484.782 412.784 487.978Z" fill={syncToSlack ? "#E01E5A" : "currentColor"} />
                                     </svg>
                                 </span>
                             </label>

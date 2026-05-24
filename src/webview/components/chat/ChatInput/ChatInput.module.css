@@ -156,8 +156,8 @@
 .switch {
     position: relative;
     display: inline-block;
-    width: 38px;
-    height: 20px;
+    width: 32px;
+    height: 18px;
 }
 
 .switch input {
@@ -182,8 +182,8 @@
 .slider:before {
     position: absolute;
     content: "";
-    height: 14px;
-    width: 14px;
+    height: 12px;
+    width: 12px;
     left: 3px;
     bottom: 3px;
     background-color: white;
@@ -192,20 +192,20 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.switch input:checked + .slider {
+.switch input:checked+.slider {
     background-color: #4A154B;
 }
 
-.switch input:focus + .slider {
+.switch input:focus+.slider {
     box-shadow: 0 0 1px #4A154B;
 }
 
-.switch input:checked + .slider:before {
-    transform: translateX(18px);
+.switch input:checked+.slider:before {
+    transform: translateX(14px);
 }
 
 .slider.round {
-    border-radius: 20px;
+    border-radius: 18px;
 }
 
 .slider.round:before {
@@ -213,17 +213,16 @@
 }
 
 .slack-icon-inside {
-    width: 10px;
-    height: 10px;
+    width: 15px;
+    height: 15px;
     position: absolute;
-    right: 5px;
-    top: 5px;
+    right: 1px;
+    top: 1.5px;
     color: rgba(255, 255, 255, 0.45);
     transition: all 0.3s ease;
     z-index: 1;
 }
 
-.switch input:checked + .slider .slack-icon-inside {
-    color: white;
-    right: 23px;
+.switch input:checked+.slider .slack-icon-inside {
+    right: 16px;
 }

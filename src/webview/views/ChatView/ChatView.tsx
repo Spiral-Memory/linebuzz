@@ -16,6 +16,7 @@ interface ChatViewProps {
     onRemoveSnippet?: (index: number) => void;
     onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
     isSlackConnected?: boolean;
+    slackChannel?: string | null;
 }
 
 interface ScrollSnapshot {
@@ -24,7 +25,7 @@ interface ScrollSnapshot {
     scrollTop: number;
 }
 
-export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, isSlackConnected }: ChatViewProps) => {
+export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, isSlackConnected, slackChannel }: ChatViewProps) => {
     const [messages, setMessages] = useState<MessageResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [hasOlder, setHasOlder] = useState(true);
@@ -548,6 +549,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     replyingTo={replyingTo}
                     onCancelReply={handleCancelReply}
                     isSlackConnected={isSlackConnected}
+                    slackChannel={slackChannel}
                 />
             </div>
         </div>

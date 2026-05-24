@@ -14,6 +14,7 @@ interface AppState {
   isLoading: boolean;
   stagedSnippet?: Snippet[] | [];
   isSlackConnected?: boolean;
+  slackChannel?: string | null;
 }
 
 export function App() {
@@ -36,6 +37,7 @@ export function App() {
             isLoggedIn: message.state.isLoggedIn,
             hasTeam: message.state.hasTeam,
             isSlackConnected: message.state.isSlackConnected,
+            slackChannel: message.state.slackChannel,
             isLoading: false
           }));
           break;
@@ -94,6 +96,7 @@ export function App() {
         onRemoveSnippet={handleRemoveSnippet}
         onOpenSnippet={handleOpenSnippet}
         isSlackConnected={state.isSlackConnected}
+        slackChannel={state.slackChannel}
       />
     </Fragment>
   );
