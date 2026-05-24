@@ -199,3 +199,17 @@
     max-width: 300px;
     color: var(--vscode-foreground);
 }
+
+.slack-text-only-badge {
+    font-size: 0.65rem;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.55;
+    margin-top: 3px;
+    align-self: flex-start;
+    cursor: default;
+    font-weight: 500;
+}
+
+.message-row-me .slack-text-only-badge {
+    align-self: flex-end;
+}

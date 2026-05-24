@@ -13,6 +13,12 @@ export interface MessageResponse {
         display_name: string;
         avatar_url: string;
     };
+    source?: string;
+    source_metadata?: {
+        display_name?: string;
+        username?: string;
+        avatar_url?: string;
+    };
     userType?: 'me' | 'other';
     quoted_id?: string;
     quoted_message?: MessageResponse;

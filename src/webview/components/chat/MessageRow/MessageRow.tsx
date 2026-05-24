@@ -18,8 +18,13 @@ interface MessageRowProps {
 }
 
 export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQuoteClick }: MessageRowProps) => {
-    const displayName = message.u?.display_name || message.u?.username || 'Unknown';
-    const avatarUrl = message.u?.avatar_url;
+    const isSlack = message.source === 'slack';
+    const displayName = isSlack 
+        ? (message.source_metadata?.display_name || message.source_metadata?.username || message.u?.display_name || message.u?.username || 'Slack User')
+        : (message.u?.display_name || message.u?.username || 'Unknown');
+    const avatarUrl = isSlack
+        ? (message.source_metadata?.avatar_url || message.u?.avatar_url)
+        : message.u?.avatar_url;
     const initials = getInitials(displayName);
     const avatarColor = getAvatarColor(displayName);
     const isMe = message.userType === 'me';
@@ -88,6 +93,11 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQ
                             return null;
                         })}
                     </div>
+                )}
+                {isSlack && (
+                    <span class={styles['slack-text-only-badge']} title="Sent via Slack">
+                        via Slack
+                    </span>
                 )}
             </div>
             <div class={styles['actions-container']}>

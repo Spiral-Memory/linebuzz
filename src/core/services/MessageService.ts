@@ -48,10 +48,13 @@ export class MessageService {
 
             logger.info("MessageService", "Messages retrieved successfully", messages);
 
-            return messages.map(msg => ({
-                ...msg,
-                userType: msg.u.user_id === session?.user_id ? 'me' : 'other'
-            }));
+            return messages.map(msg => {
+                const isSlack = msg.source === 'slack';
+                return {
+                    ...msg,
+                    userType: isSlack ? 'other' : (msg.u.user_id === session?.user_id ? 'me' : 'other')
+                };
+            });
         } catch (error: any) {
             logger.error("MessageService", "Error getting messages", error);
             vscode.window.showErrorMessage("Failed to get messages. Please try again.");
@@ -75,14 +78,17 @@ export class MessageService {
             }
 
             const subscription = await this.messageRepo.subscribeToMessages(currentTeam.id, session?.user_id, (message) => {
+                const isSlack = message.source === 'slack';
                 const enrichedMessage = {
                     ...message,
-                    userType: message.u.user_id === session?.user_id ? 'me' : 'other'
+                    userType: isSlack ? 'other' : (message.u.user_id === session?.user_id ? 'me' : 'other')
                 } as MessageResponse;
 
                 if (enrichedMessage.userType === 'other') {
                     const notificationService = Container.get("NotificationService");
-                    const sender = message.u.display_name || message.u.username || 'User';
+                    const sender = isSlack
+                        ? (message.source_metadata?.display_name || message.source_metadata?.username || message.u?.display_name || message.u?.username || 'Slack User')
+                        : (message.u?.display_name || message.u?.username || 'User');
                     const text = `${sender}: ${message.content}`;
                     notificationService.notify(text);
                 }
