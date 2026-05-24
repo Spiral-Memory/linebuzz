@@ -5,10 +5,10 @@ import * as vscode from "vscode";
 
 export class SupabaseTeamRepository implements ITeamRepository {
     private integrationSubscriptions: Map<string, any> = new Map();
-    private _onSlackConnectedEvent = new vscode.EventEmitter<void>();
+    private _onSlackConnectedEvent = new vscode.EventEmitter<boolean>();
     public readonly onSlackConnectedEvent = this._onSlackConnectedEvent.event;
 
-    public onSlackConnected(callback: () => void): void {
+    public onSlackConnected(callback: (isConnected: boolean) => void): void {
         this._onSlackConnectedEvent.event(callback);
     }
 
@@ -123,6 +123,28 @@ export class SupabaseTeamRepository implements ITeamRepository {
         throw new Error(`Unexpected response status: ${response.status}`);
     }
 
+    async isSlackConnected(teamId: string): Promise<boolean> {
+        try {
+            const supabase = SupabaseClient.getInstance().client;
+            const { data, error } = await supabase
+                .from('team_integrations')
+                .select('settings')
+                .eq('team_id', teamId)
+                .eq('provider', 'slack')
+                .maybeSingle();
+
+            if (error || !data) {
+                return false;
+            }
+
+            const settings = data.settings as any;
+            return !!settings?.active_channel_id;
+        } catch (error: any) {
+            logger.error("SupabaseTeamRepository", "Error checking if Slack is connected", error);
+            return false;
+        }
+    }
+
     async listenForSlackIntegration(teamId: string): Promise<{ unsubscribe: () => void }> {
         try {
             const supabaseClient = SupabaseClient.getInstance();
@@ -136,23 +158,15 @@ export class SupabaseTeamRepository implements ITeamRepository {
                 .on(
                     'postgres_changes',
                     {
-                        event: 'INSERT',
+                        event: '*',
                         schema: 'public',
                         table: 'team_integrations',
                         filter: `team_id=eq.${teamId}`
                     },
                     async (payload: any) => {
                         logger.debug("SupabaseTeamRepository", 'Integration change detected', payload);
-
-                        if (!payload.new) {
-                            return;
-                        }
-
-                        if (payload.new.provider === 'slack') {
-                            if (payload.new.access_token !== null) {
-                                this._onSlackConnectedEvent.fire();
-                            }
-                        }
+                        const isConnected = await this.isSlackConnected(teamId);
+                        this._onSlackConnectedEvent.fire(isConnected);
                     }
                 )
                 .subscribe((status) => {

@@ -8,9 +8,13 @@ export class TeamService {
     private currentTeam: TeamInfo | undefined;
     private integrationSubscription: { unsubscribe: () => void } | undefined;
     private slackService: SlackService;
+    private slackConnected: boolean = false;
 
     private _onDidChangeTeam = new vscode.EventEmitter<TeamInfo | undefined>();
     public readonly onDidChangeTeam = this._onDidChangeTeam.event;
+
+    private _onDidChangeSlackIntegration = new vscode.EventEmitter<boolean>();
+    public readonly onDidChangeSlackIntegration = this._onDidChangeSlackIntegration.event;
 
     constructor(private teamRepo: ITeamRepository) {
         this.slackService = new SlackService(teamRepo);
@@ -72,6 +76,8 @@ export class TeamService {
 
     public async leaveTeam(showNotification: boolean = true): Promise<void> {
         this.currentTeam = undefined;
+        this.slackConnected = false;
+        this._onDidChangeSlackIntegration.fire(false);
         
         if (this.integrationSubscription) {
             this.integrationSubscription.unsubscribe();
@@ -94,6 +100,14 @@ export class TeamService {
         if (team.invite_code) {
             await Storage.setSecret('teamInviteCode', team.invite_code);
         }
+
+        try {
+            this.slackConnected = await this.teamRepo.isSlackConnected(team.id);
+            this._onDidChangeSlackIntegration.fire(this.slackConnected);
+        } catch (error) {
+            logger.error("TeamService", "Failed to check initial slack connection", error);
+            this.slackConnected = false;
+        }
         
         try {
             if (this.integrationSubscription) {
@@ -102,8 +116,12 @@ export class TeamService {
             this.integrationSubscription = await this.slackService.listenForSlackIntegration(team.id);
             
             if (this.teamRepo.onSlackConnected) {
-                this.teamRepo.onSlackConnected(() => {
-                    this.slackService.showSlackConnectionNotification();
+                this.teamRepo.onSlackConnected((isConnected: boolean) => {
+                    this.slackConnected = isConnected;
+                    this._onDidChangeSlackIntegration.fire(isConnected);
+                    if (isConnected) {
+                        this.slackService.showSlackConnectionNotification();
+                    }
                 });
             }
             
@@ -114,6 +132,10 @@ export class TeamService {
         
         await this.updateContext(true, team);
         this._onDidChangeTeam.fire(team);
+    }
+
+    public isSlackConnected(): boolean {
+        return this.slackConnected;
     }
 
     private async updateContext(hasTeam: boolean, team?: TeamInfo) {

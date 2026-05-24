@@ -31,6 +31,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
         const authSub = this.authService.onDidChangeSession(() => this.updateIdentity());
         const teamSub = this.teamService.onDidChangeTeam(() => this.updateIdentity());
         const snippetSub = this.snippetService.onDidCaptureSnippet(() => this.updateSnippet());
+        const slackSub = this.teamService.onDidChangeSlackIntegration(() => this.updateIdentity());
 
         let typingSub: { unsubscribe: () => void } | void;
         this.activityService.subscribeToTyping((payload) => {
@@ -48,6 +49,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             authSub.dispose();
             teamSub.dispose();
             snippetSub.dispose();
+            slackSub.dispose();
             if (typingSub) {
                 typingSub.unsubscribe();
             }
@@ -195,7 +197,8 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             command: 'updateIdentityState',
             state: {
                 isLoggedIn: !!session,
-                hasTeam: !!team
+                hasTeam: !!team,
+                isSlackConnected: this.teamService.isSlackConnected()
             }
         });
     }

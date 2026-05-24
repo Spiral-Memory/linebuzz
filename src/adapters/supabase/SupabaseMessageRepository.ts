@@ -14,6 +14,7 @@ export class SupabaseMessageRepository implements IMessageRepository {
             p_attachments: message.attachments,
             p_quoted_id: message.quoted_id,
             p_parent_id: null,
+            p_sync_to_slack: message.sync_to_slack ?? false,
         });
         if (error) {
             logger.error("SupabaseMessageRepository", "RPC call failed", error);

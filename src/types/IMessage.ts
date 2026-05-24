@@ -23,4 +23,5 @@ export interface MessageRequest {
     content: string;
     attachments: Attachment[];
     quoted_id?: string;
+    sync_to_slack?: boolean;
 }

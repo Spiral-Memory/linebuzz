@@ -13,6 +13,7 @@ interface AppState {
   hasTeam: boolean;
   isLoading: boolean;
   stagedSnippet?: Snippet[] | [];
+  isSlackConnected?: boolean;
 }
 
 export function App() {
@@ -21,7 +22,8 @@ export function App() {
     isLoggedIn: false,
     hasTeam: false,
     isLoading: true,
-    stagedSnippet: []
+    stagedSnippet: [],
+    isSlackConnected: false
   });
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export function App() {
             ...prev,
             isLoggedIn: message.state.isLoggedIn,
             hasTeam: message.state.hasTeam,
+            isSlackConnected: message.state.isSlackConnected,
             isLoading: false
           }));
           break;
@@ -90,6 +93,7 @@ export function App() {
         onClearSnippet={handleClearSnippet}
         onRemoveSnippet={handleRemoveSnippet}
         onOpenSnippet={handleOpenSnippet}
+        isSlackConnected={state.isSlackConnected}
       />
     </Fragment>
   );

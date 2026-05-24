@@ -10,7 +10,8 @@ export interface ITeamRepository {
     joinTeam(inviteCode: string): Promise<TeamInfo>;
     generateSlackOAuthUrl(teamId: string): Promise<{ url: string } | { settings: any }>;
     listenForSlackIntegration(teamId: string): Promise<{ unsubscribe: () => void }>;
-    onSlackConnected?(callback: () => void): void;
+    onSlackConnected?(callback: (isConnected: boolean) => void): void;
     updateActiveChannel(teamId: string, channelId: string): Promise<void>;
     disconnectSlack(teamId: string): Promise<void>;
+    isSlackConnected(teamId: string): Promise<boolean>;
 }
