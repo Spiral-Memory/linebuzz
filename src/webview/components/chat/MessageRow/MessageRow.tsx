@@ -29,6 +29,15 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQ
     const avatarColor = getAvatarColor(displayName);
     const isMe = message.userType === 'me';
 
+    const getQuotedUserName = () => {
+        if (!message.quoted_message) return '';
+        const q = message.quoted_message;
+        if (q.source === 'slack' && q.source_metadata) {
+            return q.source_metadata.display_name || q.source_metadata.username || 'Slack User';
+        }
+        return q.u?.display_name || q.u?.username || 'User';
+    };
+
     return (
         <div
             class={`${styles['message-row']} ${isMe ? styles['message-row-me'] : ''} ${isHighlighted ? styles['message-row-highlighted'] : ''}`}
@@ -70,7 +79,7 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQ
                         role="button"
                     >
                         <div class={styles['quoted-user']}>
-                            {message.quoted_message.u.display_name || message.quoted_message.u.username}
+                            {getQuotedUserName()}
                         </div>
                         <div class={styles['quoted-content']}>
                             {message.quoted_message.content}

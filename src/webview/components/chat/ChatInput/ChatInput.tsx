@@ -101,7 +101,13 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
                                 <path d="M9 14L4 9L9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 <path d="M4 9H14C18.4183 9 22 12.5817 22 17V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            Replying to {replyingTo.u?.display_name || replyingTo.u?.username || 'Unknown'}
+                            Replying to {(() => {
+                                if (!replyingTo) return 'Unknown';
+                                if (replyingTo.source === 'slack' && replyingTo.source_metadata) {
+                                    return replyingTo.source_metadata.display_name || replyingTo.source_metadata.username || 'Slack User';
+                                }
+                                return replyingTo.u?.display_name || replyingTo.u?.username || 'Unknown';
+                            })()}
                         </div>
                         <div class={styles['reply-message-text']}>
                             {replyingTo.content}
