@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Container } from "../services/ServiceContainer";
 import { SlackService } from "../services/SlackService";
 
-export async function openSlackCommand() {
+export async function syncSlackCommand() {
     const teamService = Container.get("TeamService");
     const currentTeam = teamService.getTeam();
 

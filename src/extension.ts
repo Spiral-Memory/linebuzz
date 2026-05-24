@@ -21,7 +21,7 @@ import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
 import { refreshCLensCommand, activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
-import { openSlackCommand } from "./core/commands/SlackCommand";
+import { syncSlackCommand } from "./core/commands/SlackCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 import { ReadOnlyContentProvider } from "./core/providers/ReadOnlyContentProvider";
 import { NotificationService } from "./core/services/NotificationService";
@@ -113,7 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand("linebuzz.jumpToMessage", (messageId: string) =>
                 chatPanelProvider.jumpToMessage(messageId)
             ),
-            vscode.commands.registerCommand("linebuzz.openSlack", openSlackCommand)
+            vscode.commands.registerCommand("linebuzz.syncSlack", syncSlackCommand)
         );
 
     } catch (e) {

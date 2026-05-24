@@ -68,8 +68,8 @@
         "icon": "$(bell-dot)"
       },
       {
-        "command": "linebuzz.openSlack",
-        "title": "Connect Slack",
+        "command": "linebuzz.syncSlack",
+        "title": "Sync Slack",
         "icon": "$(symbol-numeric)"
       }
     ],
@@ -141,7 +141,7 @@
           "group": "navigation@1"
         },
         {
-          "command": "linebuzz.openSlack",
+          "command": "linebuzz.syncSlack",
           "when": "view == linebuzz.chatpanel && linebuzz.isAdmin",
           "group": "navigation@2"
         }
