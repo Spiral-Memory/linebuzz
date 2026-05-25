@@ -116,6 +116,10 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand("linebuzz.syncSlack", syncSlackCommand)
         );
 
+        context.subscriptions.push(
+            vscode.window.registerUriHandler(navigatorService)
+        );
+
     } catch (e) {
         logger.error("Extension", "Failed to activate extension:", e);
         return;
