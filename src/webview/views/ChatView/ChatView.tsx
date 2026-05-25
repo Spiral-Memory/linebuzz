@@ -266,6 +266,13 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     }, [messages.length > 0]);
 
     const handleQuoteClick = (messageId: string) => {
+        const node = messageListRef.current?.querySelector(`[data-id="${messageId}"]`);
+        if (node) {
+            node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            setHighlightedMessageId(messageId);
+            return;
+        }
+
         const cacheIndex = cachedMessagesRef.current.findIndex(m => m.message_id === messageId);
 
         if (cacheIndex !== -1) {
