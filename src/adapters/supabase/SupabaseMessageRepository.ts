@@ -12,8 +12,8 @@ export class SupabaseMessageRepository implements IMessageRepository {
             p_team_id: teamId,
             p_content: message.content,
             p_attachments: message.attachments,
-            p_quoted_id: message.quoted_id,
-            p_parent_id: null,
+            p_quoted_id: message.quoted_id ?? null,
+            p_parent_id: message.parent_id ?? null,
             p_sync_to_slack: message.sync_to_slack ?? false,
         });
         if (error) {
@@ -63,6 +63,37 @@ export class SupabaseMessageRepository implements IMessageRepository {
         logger.warn("SupabaseMessageRepository", "Unexpected response format", response);
         return [];
     }
+
+    async getThreadMessages(teamId: string, threadId: string, limit: number = 50, anchorId?: string, direction: 'before' | 'after' | 'around' = 'before'): Promise<MessageResponse[]> {
+        const supabase = SupabaseClient.getInstance().client;
+        logger.info("SupabaseMessageRepository", `Getting thread messages for team: ${teamId} thread: ${threadId} limit: ${limit} anchor: ${anchorId} direction: ${direction}`);
+
+        const { data, error } = await supabase.rpc('get_thread_messages', {
+            p_team_id: teamId,
+            p_thread_id: threadId,
+            p_limit: limit,
+            p_anchor_id: anchorId,
+            p_direction: direction
+        });
+
+        if (error) {
+            logger.error("SupabaseMessageRepository", "Thread RPC call failed", error);
+            throw new Error(`RPC call failed: ${error.message}`);
+        }
+        const response = data as any;
+        if (response.status === 'error') {
+            throw new Error(response.message);
+        }
+
+        if (response.status === 'success' && Array.isArray(response.messages)) {
+            logger.info("SupabaseMessageRepository", `Thread messages retrieved successfully: ${response.messages.length}`);
+            return response.messages;
+        }
+
+        logger.warn("SupabaseMessageRepository", "Unexpected thread response format", response);
+        return [];
+    }
+
 
     async subscribeToMessages(teamId: string, userId: string, callback: (message: MessageResponse) => void): Promise<{ unsubscribe: () => void }> {
         logger.info("SupabaseMessageRepository", `Subscribing to messages for team: ${teamId}`);

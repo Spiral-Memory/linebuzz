@@ -213,3 +213,38 @@
 .message-row-me .slack-text-only-badge {
     align-self: flex-end;
 }
+
+.view-replies-container {
+    margin-top: 4px;
+    display: flex;
+    align-self: flex-start;
+}
+
+.message-row-me .view-replies-container {
+    align-self: flex-end;
+}
+
+.view-replies-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.view-replies-button:hover {
+    color: var(--vscode-foreground);
+}
+
+.view-replies-icon {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+}

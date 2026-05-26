@@ -15,9 +15,10 @@ interface ChatInputProps {
     onCancelReply?: () => void;
     isSlackConnected?: boolean;
     slackChannel?: string | null;
+    activeThreadParent?: MessageResponse | null;
 }
 
-export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply, isSlackConnected, slackChannel }: ChatInputProps) => {
+export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpenSnippet, onTyping, replyingTo, onCancelReply, isSlackConnected, slackChannel, activeThreadParent }: ChatInputProps) => {
     const [value, setValue] = useState('');
     const [syncToSlack, setSyncToSlack] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -58,6 +59,7 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
         const messageRequest: MessageRequest = {
             content: value,
             attachments: stagedSnippet || [],
+            parent_id: activeThreadParent ? activeThreadParent.message_id : undefined,
             quoted_id: replyingTo?.message_id,
             sync_to_slack: syncToSlack
         };
@@ -126,7 +128,7 @@ export const ChatInput = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOp
                 value={value}
                 onInput={handleInput}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
+                placeholder={activeThreadParent ? 'Reply in thread...' : (replyingTo ? 'Type a reply...' : 'Type a message...')}
                 rows={1}
             />
 

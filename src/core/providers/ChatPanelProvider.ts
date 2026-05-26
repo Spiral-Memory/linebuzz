@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewProvider } from './BaseWebviewProvider';
 import { Container } from '../services/ServiceContainer';
+import { SupabaseClient } from '../../adapters/supabase/SupabaseClient';
 
 export class ChatPanelProvider extends BaseWebviewProvider {
     public static readonly viewId = 'linebuzz.chatpanel';
@@ -164,6 +165,45 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 break;
             }
 
+            case 'getThreadMessages': {
+                try {
+                    const { threadId, limit, anchorId, direction, intent } = data;
+                    const messages = await this.messageService.getThreadMessages(threadId, limit, anchorId, direction);
+
+                    let command: string | null = null;
+                    switch (intent) {
+                        case 'initial':
+                            command = 'loadThreadMessages';
+                            break;
+                        case 'jump-to-bottom':
+                            command = 'jumpThreadToBottom';
+                            break;
+                        case 'paginate-newer':
+                            command = 'appendThreadMessagesBatch';
+                            break;
+                        case 'paginate-older':
+                            command = 'prependThreadMessages';
+                            break;
+                        case 'jump-to-message':
+                            command = 'jumpThreadToMessage';
+                            break;
+                    }
+
+                    if (command) {
+                        this._view?.webview.postMessage({
+                            command: command,
+                            messages: messages,
+                            targetId: anchorId
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error handling getThreadMessages:', error);
+                    vscode.window.showErrorMessage('Failed to get thread messages.');
+                }
+                break;
+            }
+
+
             case 'sendTyping':
                 await this.activityService.sendTypingSignal();
                 break;
@@ -181,10 +221,63 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             await vscode.commands.executeCommand('linebuzz.chatpanel.focus');
         }
 
-        this._view?.webview.postMessage({
-            command: 'jumpToMessage',
-            targetId: messageId
-        });
+        try {
+            const supabase = SupabaseClient.getInstance().client;
+            const teamService = Container.get("TeamService");
+            const currentTeam = teamService.getTeam();
+            if (!currentTeam) return;
+
+            const { data: resData, error } = await supabase.rpc('get_message_by_id', {
+                p_team_id: currentTeam.id,
+                p_message_id: messageId
+            });
+            if (error) throw error;
+
+            if (resData.status === 'success' && resData.message) {
+                const targetMsg = resData.message;
+                const isSlack = targetMsg.source === 'slack';
+                const session = await this.authService.getSession();
+                const enrichedTargetMsg = {
+                    ...targetMsg,
+                    userType: isSlack ? 'other' : (targetMsg.u.user_id === session?.user_id ? 'me' : 'other')
+                };
+
+                if (enrichedTargetMsg.parent_id) {
+                    const { data: parentData, error: parentError } = await supabase.rpc('get_message_by_id', {
+                        p_team_id: currentTeam.id,
+                        p_message_id: enrichedTargetMsg.parent_id
+                    });
+                    if (parentError) throw parentError;
+
+                    if (parentData.status === 'success' && parentData.message) {
+                        const parentMsg = parentData.message;
+                        const isParentSlack = parentMsg.source === 'slack';
+                        const enrichedParentMsg = {
+                            ...parentMsg,
+                            userType: isParentSlack ? 'other' : (parentMsg.u.user_id === session?.user_id ? 'me' : 'other')
+                        };
+
+                        this._view?.webview.postMessage({
+                            command: 'jumpToMessage',
+                            targetId: messageId,
+                            parentMessage: enrichedParentMsg
+                        });
+                        return;
+                    }
+                }
+
+                this._view?.webview.postMessage({
+                    command: 'jumpToMessage',
+                    targetId: messageId
+                });
+            }
+        } catch (err) {
+            console.error("Error resolving jumpToMessage on backend:", err);
+            this._view?.webview.postMessage({
+                command: 'jumpToMessage',
+                targetId: messageId
+            });
+        }
     }
 
     private async updateIdentity() {

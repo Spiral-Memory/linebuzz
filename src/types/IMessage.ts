@@ -23,11 +23,13 @@ export interface MessageResponse {
     quoted_id?: string;
     quoted_message?: MessageResponse;
     attachments?: any[];
+    reply_count?: number;
 }
 
 export interface MessageRequest {
     content: string;
     attachments: Attachment[];
     quoted_id?: string;
+    parent_id?: string;
     sync_to_slack?: boolean;
 }

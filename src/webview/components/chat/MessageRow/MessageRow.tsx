@@ -15,9 +15,13 @@ interface MessageRowProps {
     isHighlighted?: boolean;
     onReply?: (message: MessageResponse) => void;
     onQuoteClick?: (messageId: string) => void;
+    onThreadClick?: (message: MessageResponse) => void;
+    replyCount?: number;
+    onViewThread?: () => void;
+    isThreadView?: boolean;
 }
 
-export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQuoteClick }: MessageRowProps) => {
+export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQuoteClick, onThreadClick, replyCount, onViewThread, isThreadView }: MessageRowProps) => {
     const isSlack = message.source === 'slack';
     const displayName = isSlack 
         ? (message.source_metadata?.display_name || message.source_metadata?.username || message.u?.display_name || message.u?.username || 'Slack User')
@@ -108,14 +112,31 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQ
                         via Slack
                     </span>
                 )}
+                {replyCount !== undefined && replyCount > 0 && !isThreadView && (
+                    <div class={styles['view-replies-container']}>
+                        <button class={styles['view-replies-button']} onClick={onViewThread}>
+                            <svg class={styles['view-replies-icon']} viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                <path d="M4 2 C4 2 4 8 10 10" />
+                            </svg>
+                            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                        </button>
+                    </div>
+                )}
             </div>
             <div class={styles['actions-container']}>
-                <div class={styles['action-button']} onClick={() => onReply?.(message)} title="Reply">
+                <div class={styles['action-button']} onClick={() => onReply?.(message)} title="Quote Message">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 14L4 9L9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         <path d="M4 9H14C18.4183 9 22 12.5817 22 17V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </div>
+                {!message.parent_id && !isThreadView && (
+                    <div class={styles['action-button']} onClick={() => onThreadClick?.(message)} title="Reply in thread">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                    </div>
+                )}
             </div>
         </div>
     );
