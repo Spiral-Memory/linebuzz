@@ -95,6 +95,28 @@ export class SupabaseMessageRepository implements IMessageRepository {
     }
 
 
+    async getMessageById(teamId: string, messageId: string): Promise<MessageResponse | null> {
+        const supabase = SupabaseClient.getInstance().client;
+        logger.info("SupabaseMessageRepository", `Getting message by id: ${messageId} in team: ${teamId}`);
+
+        const { data, error } = await supabase.rpc('get_message_by_id', {
+            p_team_id: teamId,
+            p_message_id: messageId
+        });
+
+        if (error) {
+            logger.error("SupabaseMessageRepository", "RPC call get_message_by_id failed", error);
+            return null;
+        }
+
+        const response = data as any;
+        if (response.status === 'success' && response.message) {
+            return response.message;
+        }
+        return null;
+    }
+
+
     async subscribeToMessages(teamId: string, userId: string, callback: (message: MessageResponse) => void): Promise<{ unsubscribe: () => void }> {
         logger.info("SupabaseMessageRepository", `Subscribing to messages for team: ${teamId}`);
         const supabaseClient = SupabaseClient.getInstance();
@@ -124,19 +146,9 @@ export class SupabaseMessageRepository implements IMessageRepository {
                         return;
                     }
 
-                    const { data, error } = await supabase.rpc('get_message_by_id', {
-                        p_team_id: teamId,
-                        p_message_id: payload.new.id
-                    });
-
-                    if (error) {
-                        logger.error("SupabaseMessageRepository", "Failed to get message details", error);
-                        return;
-                    }
-
-                    const response = data as any;
-                    if (response.status === 'success' && response.message) {
-                        callback(response.message);
+                    const message = await this.getMessageById(teamId, payload.new.id);
+                    if (message) {
+                        callback(message);
                     }
                 }
             )

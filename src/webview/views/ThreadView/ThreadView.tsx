@@ -328,6 +328,10 @@ export const ThreadView = ({
             const message = event.data;
             switch (message.command) {
                 case 'loadThreadMessages': {
+                    if (message.error) {
+                        setIsThreadLoading(false);
+                        break;
+                    }
                     threadCachedRef.current = message.messages;
                     onCacheMessages(message.messages);
                     setThreadMessages(message.messages.slice(-MAX_DOM_MESSAGE));
@@ -340,6 +344,11 @@ export const ThreadView = ({
                 }
 
                 case 'prependThreadMessages': {
+                    if (message.error) {
+                        setIsThreadLoading(false);
+                        setThreadHasOlder(false);
+                        break;
+                    }
                     const olderMsgs = message.messages;
                     const uniqueOlder = olderMsgs.filter((m: MessageResponse) =>
                         !threadCachedRef.current.some(e => e.message_id === m.message_id)
@@ -361,6 +370,11 @@ export const ThreadView = ({
                 }
 
                 case 'appendThreadMessagesBatch': {
+                    if (message.error) {
+                        setIsThreadLoading(false);
+                        setThreadHasNewer(false);
+                        break;
+                    }
                     const newerMsgs = message.messages;
                     const uniqueNewer = newerMsgs.filter((m: MessageResponse) =>
                         !threadCachedRef.current.some(e => e.message_id === m.message_id)
@@ -393,6 +407,10 @@ export const ThreadView = ({
                 }
 
                 case 'jumpThreadToBottom': {
+                    if (message.error) {
+                        setIsThreadLoading(false);
+                        break;
+                    }
                     threadCachedRef.current = message.messages;
                     onCacheMessages(message.messages);
                     setThreadMessages(message.messages.slice(-MAX_DOM_MESSAGE));
@@ -404,6 +422,10 @@ export const ThreadView = ({
                 }
 
                 case 'jumpThreadToMessage': {
+                    if (message.error) {
+                        setIsThreadLoading(false);
+                        break;
+                    }
                     const targetId = message.targetId;
                     if (message.messages) {
                         threadCachedRef.current = message.messages;
@@ -507,7 +529,7 @@ export const ThreadView = ({
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, [activeThreadParent.message_id, initialMessages]);
+    }, [activeThreadParent.message_id]);
 
     return (
         <>

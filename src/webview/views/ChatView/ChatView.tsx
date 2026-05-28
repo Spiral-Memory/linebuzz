@@ -366,6 +366,10 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             const message = event.data;
             switch (message.command) {
                 case 'loadInitialMessages':
+                    if (message.error) {
+                        setIsLoading(false);
+                        break;
+                    }
                     cachedMessagesRef.current = message.messages;
                     setMessages(message.messages.slice(-MAX_DOM_MESSAGE));
                     setHasOlder(message.messages.length >= FETCH_LIMIT);
@@ -374,6 +378,11 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     break;
 
                 case 'prependMessages': {
+                    if (message.error) {
+                        setIsLoading(false);
+                        setHasOlder(false);
+                        break;
+                    }
                     const olderMessages = message.messages;
                     const uniqueOlder = olderMessages.filter((newMsg: MessageResponse) =>
                         !cachedMessagesRef.current.some(existing => existing.message_id === newMsg.message_id)
@@ -401,6 +410,11 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                 }
 
                 case 'appendMessagesBatch': {
+                    if (message.error) {
+                        setIsLoading(false);
+                        setHasNewer(false);
+                        break;
+                    }
                     const newerMessages = message.messages;
                     const uniqueNewer = newerMessages.filter((newMsg: MessageResponse) =>
                         !cachedMessagesRef.current.some(existing => existing.message_id === newMsg.message_id)
@@ -487,6 +501,10 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                 }
 
                 case 'jumpToBottom': {
+                    if (message.error) {
+                        setIsLoading(false);
+                        break;
+                    }
                     cachedMessagesRef.current = message.messages;
                     setMessages(message.messages.slice(-MAX_DOM_MESSAGE));
                     setHasOlder(message.messages.length >= FETCH_LIMIT);
@@ -496,7 +514,29 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                     break;
                 }
 
+                case 'openThreadAndJump': {
+                    if (message.error) {
+                        setIsLoading(false);
+                        break;
+                    }
+                    const { parentMessage, targetId } = message;
+
+                    if (parentMessage) {
+                        if (!cachedMessagesRef.current.some(m => m.message_id === parentMessage.message_id)) {
+                            cachedMessagesRef.current = [parentMessage, ...cachedMessagesRef.current];
+                        }
+                        setHighlightedMessageId(targetId);
+                        handleViewThread(parentMessage);
+                    }
+                    setIsLoading(false);
+                    break;
+                }
+
                 case 'jumpToMessage': {
+                    if (message.error) {
+                        setIsLoading(false);
+                        break;
+                    }
                     const { targetId, parentMessage, messages: newMessages } = message;
 
                     if (newMessages) {
