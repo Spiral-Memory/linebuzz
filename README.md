@@ -15,6 +15,7 @@ Stay in flow with your team using built-in huddles, team management, and persist
 * **Secure Infrastructure**: Built on Supabase for reliable, secure real-time data synchronization.
 * **Inline Code Discussions**: Comment directly on specific lines of code to keep context.
 * **Smart Deep Linking**: Seamlessly navigate between chat messages and referenced code files.
+* **Slack Integration **: Sync huddle messages, threads, and code attachments with interactive deep links (VS Code / GitHub) to/from your Slack workspace.
 
 ## **Development** 🛠️
 
@@ -55,14 +56,16 @@ That’s it -> LineBuzz will start running in the new window.
    - **Join a Team**: Enter a Team ID using `LineBuzz: Join Team`.
 3. **Collaborate**: Open the **LineBuzz Huddle** sidebar to start chatting with your team in real-time.
 4. **Code Sharing**: Paste code snippets directly into chat—LineBuzz handles formatting and highlighting automatically.
+5. **Slack Synchronization**:
+   - **Connect Workspace**: Click the **Sync Slack** icon in the LineBuzz Huddle panel title bar (only visible to team admins), authenticate, and choose the target channel.
+   - **Sync Messages**: Use the Slack toggle checkbox inside the huddle chat input to selectively sync a message (including code segments and quotes) to Slack.
+   - **Two-way Bridging**: Replies and messages sent within the linked Slack channel are automatically pushed back to your LineBuzz huddle.
 
 ## **Roadmap 🛣️**
 
-* **Issue Threads**: Create threads for issues and code discussions.
-* **Team Feed**: Activity stream for team events and updates.
-* **Mentions & Notifications**: @mention team members and get notified.
-* **E2E**: Support end-to-end encryption
-* **Integrations**: Support bridging with external platforms (Slack, Discord, Teams, etc.)
+* **Threads**: Create threads for replies and code discussions.
+* **Mentions**: @mention team members and get notified.
+* **Integrations**: Support bridging with additional external platforms.
 * **AI Summaries**: Auto-generated summaries of catch-up conversations.
 
 
