@@ -61,6 +61,67 @@ export class MessageService {
             return [];
         }
     }
+
+    public async getThreadMessages(threadId: string, limit?: number, anchorId?: string, direction?: 'before' | 'after' | 'around'): Promise<MessageResponse[]> {
+        try {
+            const teamService = Container.get("TeamService");
+            const currentTeam = teamService.getTeam();
+
+            if (!currentTeam) {
+                vscode.window.showErrorMessage("Please join a team.");
+                return [];
+            }
+
+            const authService = Container.get("AuthService");
+            const [messages, session] = await Promise.all([
+                this.messageRepo.getThreadMessages(currentTeam.id, threadId, limit, anchorId, direction),
+                authService.getSession()
+            ]);
+
+            logger.info("MessageService", "Thread messages retrieved successfully", messages);
+
+            return messages.map(msg => {
+                const isSlack = msg.source === 'slack';
+                return {
+                    ...msg,
+                    userType: isSlack ? 'other' : (msg.u.user_id === session?.user_id ? 'me' : 'other')
+                };
+            });
+        } catch (error: any) {
+            logger.error("MessageService", "Error getting thread messages", error);
+            vscode.window.showErrorMessage("Failed to get thread messages. Please try again.");
+            return [];
+        }
+    }
+
+    public async getMessageById(messageId: string): Promise<MessageResponse | null> {
+        try {
+            const teamService = Container.get("TeamService");
+            const currentTeam = teamService.getTeam();
+
+            if (!currentTeam) {
+                return null;
+            }
+
+            const authService = Container.get("AuthService");
+            const [msg, session] = await Promise.all([
+                this.messageRepo.getMessageById(currentTeam.id, messageId),
+                authService.getSession()
+            ]);
+
+            if (!msg) return null;
+
+            const isSlack = msg.source === 'slack';
+            return {
+                ...msg,
+                userType: isSlack ? 'other' : (msg.u.user_id === session?.user_id ? 'me' : 'other')
+            };
+        } catch (error: any) {
+            logger.error("MessageService", "Error getting message by id", error);
+            return null;
+        }
+    }
+
     public async subscribeToMessages(postMessage: (message: MessageResponse) => void): Promise<{ unsubscribe: () => void } | void> {
         try {
             const teamService = Container.get("TeamService");

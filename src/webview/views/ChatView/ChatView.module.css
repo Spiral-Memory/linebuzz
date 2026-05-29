@@ -1,4 +1,5 @@
 .chat-view-container {
+    position: relative;
     display: flex;
     background-color: var(--bg-color);
     flex-direction: column;
@@ -106,4 +107,34 @@
 
 .new-messages-indicator:active {
     transform: translateY(0);
+}
+
+.thread-nav-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+    user-select: none;
+}
+
+.thread-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--vscode-descriptionForeground);
+    transition: color 0.15s ease;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.thread-back-link:hover {
+    color: var(--vscode-foreground);
+}
+
+.back-icon {
+    width: 12px;
+    height: 12px;
 }

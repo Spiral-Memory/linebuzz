@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewProvider } from './BaseWebviewProvider';
 import { Container } from '../services/ServiceContainer';
+import { MessageResponse } from '../../types/IMessage';
 
 export class ChatPanelProvider extends BaseWebviewProvider {
     public static readonly viewId = 'linebuzz.chatpanel';
@@ -110,28 +111,48 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             }
 
             case 'getMessages': {
-                try {
-                    const { limit, anchorId, direction, intent } = data;
-                    const messages = await this.messageService.getMessages(limit, anchorId, direction);
+                const { limit, anchorId, direction, intent } = data;
+                let command: string | null = null;
+                switch (intent) {
+                    case 'initial':
+                        command = 'loadInitialMessages';
+                        break;
+                    case 'jump-to-bottom':
+                        command = 'jumpToBottom';
+                        break;
+                    case 'paginate-newer':
+                        command = 'appendMessagesBatch';
+                        break;
+                    case 'paginate-older':
+                        command = 'prependMessages';
+                        break;
+                    case 'jump-to-message':
+                        command = 'jumpToMessage';
+                        break;
+                }
 
-                    let command: string | null = null;
-                    switch (intent) {
-                        case 'initial':
-                            command = 'loadInitialMessages';
-                            break;
-                        case 'jump-to-bottom':
-                            command = 'jumpToBottom';
-                            break;
-                        case 'paginate-newer':
-                            command = 'appendMessagesBatch';
-                            break;
-                        case 'paginate-older':
-                            command = 'prependMessages';
-                            break;
-                        case 'jump-to-message':
-                            command = 'jumpToMessage';
-                            break;
+                try {
+                    let isThreadReply = false;
+                    let parentMessage: MessageResponse | null = null;
+
+                    if (anchorId) {
+                        const msgDetails = await this.messageService.getMessageById(anchorId);
+                        if (msgDetails && msgDetails.parent_id) {
+                            isThreadReply = true;
+                            parentMessage = await this.messageService.getMessageById(msgDetails.parent_id);
+                        }
                     }
+
+                    if (isThreadReply && parentMessage) {
+                        this._view?.webview.postMessage({
+                            command: 'openThreadAndJump',
+                            parentMessage: parentMessage,
+                            targetId: anchorId
+                        });
+                        break;
+                    }
+
+                    const messages = await this.messageService.getMessages(limit, anchorId, direction);
 
                     if (command) {
                         this._view?.webview.postMessage({
@@ -157,12 +178,67 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                         this._subscription = sub;
                     }
 
-                } catch (error) {
+                } catch (error: any) {
                     console.error('Error handling getMessages:', error);
                     vscode.window.showErrorMessage('Failed to get messages.');
+                    if (command) {
+                        this._view?.webview.postMessage({
+                            command: command,
+                            messages: [],
+                            error: error.message,
+                            targetId: anchorId
+                        });
+                    }
                 }
                 break;
             }
+
+            case 'getThreadMessages': {
+                const { threadId, limit, anchorId, direction, intent } = data;
+                let command: string | null = null;
+                switch (intent) {
+                    case 'initial':
+                        command = 'loadThreadMessages';
+                        break;
+                    case 'jump-to-bottom':
+                        command = 'jumpThreadToBottom';
+                        break;
+                    case 'paginate-newer':
+                        command = 'appendThreadMessagesBatch';
+                        break;
+                    case 'paginate-older':
+                        command = 'prependThreadMessages';
+                        break;
+                    case 'jump-to-message':
+                        command = 'jumpThreadToMessage';
+                        break;
+                }
+
+                try {
+                    const messages = await this.messageService.getThreadMessages(threadId, limit, anchorId, direction);
+
+                    if (command) {
+                        this._view?.webview.postMessage({
+                            command: command,
+                            messages: messages,
+                            targetId: anchorId
+                        });
+                    }
+                } catch (error: any) {
+                    console.error('Error handling getThreadMessages:', error);
+                    vscode.window.showErrorMessage('Failed to get thread messages.');
+                    if (command) {
+                        this._view?.webview.postMessage({
+                            command: command,
+                            messages: [],
+                            error: error.message,
+                            targetId: anchorId
+                        });
+                    }
+                }
+                break;
+            }
+
 
             case 'sendTyping':
                 await this.activityService.sendTypingSignal();
@@ -181,10 +257,33 @@ export class ChatPanelProvider extends BaseWebviewProvider {
             await vscode.commands.executeCommand('linebuzz.chatpanel.focus');
         }
 
-        this._view?.webview.postMessage({
-            command: 'jumpToMessage',
-            targetId: messageId
-        });
+        try {
+            const enrichedTargetMsg = await this.messageService.getMessageById(messageId);
+            if (enrichedTargetMsg) {
+                if (enrichedTargetMsg.parent_id) {
+                    const enrichedParentMsg = await this.messageService.getMessageById(enrichedTargetMsg.parent_id);
+                    if (enrichedParentMsg) {
+                        this._view?.webview.postMessage({
+                            command: 'jumpToMessage',
+                            targetId: messageId,
+                            parentMessage: enrichedParentMsg
+                        });
+                        return;
+                    }
+                }
+
+                this._view?.webview.postMessage({
+                    command: 'jumpToMessage',
+                    targetId: messageId
+                });
+            }
+        } catch (err) {
+            console.error("Error resolving jumpToMessage on backend:", err);
+            this._view?.webview.postMessage({
+                command: 'jumpToMessage',
+                targetId: messageId
+            });
+        }
     }
 
     private async updateIdentity() {
