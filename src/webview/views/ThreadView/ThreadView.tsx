@@ -80,6 +80,7 @@ export const ThreadView = ({
             requestAnimationFrame(() => {
                 scrollToBottom('auto');
                 shouldScrollToBottomRef.current = false;
+                isInitialLoadRef.current = false;
             });
             return;
         }
@@ -170,6 +171,9 @@ export const ThreadView = ({
             const newSlice = threadCachedRef.current.slice(newStartIndex, newStartIndex + MAX_DOM_MESSAGE);
             captureSnapshot(currentMsgs[0]);
             setThreadMessages(newSlice);
+            if (newStartIndex + newSlice.length < threadCachedRef.current.length) {
+                setThreadHasNewer(true);
+            }
         } else if (threadHasOlderRef.current) {
             setIsThreadLoading(true);
             captureSnapshot(currentMsgs[0]);
@@ -199,6 +203,9 @@ export const ThreadView = ({
             const newSlice = threadCachedRef.current.slice(newStartIndex, newEndIndex);
             captureSnapshot(newSlice[0]);
             setThreadMessages(newSlice);
+            if (newStartIndex > 0) {
+                setThreadHasOlder(true);
+            }
         } else if (threadHasNewerRef.current) {
             setIsThreadLoading(true);
             vscode.postMessage({

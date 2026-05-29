@@ -76,12 +76,12 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
             if (messageListRef.current) {
                 mainChannelScrollTopRef.current = messageListRef.current.scrollTop;
             }
-            isInitialLoadRef.current = true;
             setActiveThreadParent(parent);
         } else {
             setActiveThreadParent(null);
+            const isJumping = !!jumpRequestRef.current;
             requestAnimationFrame(() => {
-                if (messageListRef.current) {
+                if (messageListRef.current && !isJumping) {
                     messageListRef.current.scrollTop = mainChannelScrollTopRef.current;
                 }
             });
@@ -100,6 +100,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
     };
 
     useLayoutEffect(() => {
+        if (activeThreadParent) return;
         if (messages.length === 0) return;
 
         if (shouldScrollToBottomRef.current) {
@@ -149,7 +150,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                 }
             });
         }
-    }, [messages]);
+    }, [messages, activeThreadParent]);
 
     useEffect(() => {
         if (highlightedMessageId) {
@@ -263,6 +264,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
     useEffect(() => {
         if (messages.length === 0) return;
+        if (activeThreadParent) return;
         if (!messageListRef.current || !topSentinelRef.current || !bottomSentinelRef.current) return;
 
         const observer = new IntersectionObserver(
@@ -289,7 +291,7 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
         observer.observe(bottomSentinelRef.current);
 
         return () => observer.disconnect();
-    }, [messages.length > 0]);
+    }, [messages, activeThreadParent]);
 
     const handleQuoteClick = (messageId: string) => {
         const node = messageListRef.current?.querySelector(`[data-id="${messageId}"]`);
@@ -546,6 +548,9 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         setHasNewer(true);
                         setIsLoading(false);
                         jumpRequestRef.current = targetId;
+                        if (activeThreadParentRef.current) {
+                            handleViewThread(null);
+                        }
                         break;
                     }
 
@@ -560,10 +565,15 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
 
                     const isRendered = messagesRef.current.some(m => m.message_id === targetId);
                     if (isRendered) {
-                        const node = messageListRef.current?.querySelector(`[data-id="${targetId}"]`);
-                        if (node) {
-                            node.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                            setHighlightedMessageId(targetId);
+                        if (activeThreadParentRef.current) {
+                            jumpRequestRef.current = targetId;
+                            handleViewThread(null);
+                        } else {
+                            const node = messageListRef.current?.querySelector(`[data-id="${targetId}"]`);
+                            if (node) {
+                                node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                                setHighlightedMessageId(targetId);
+                            }
                         }
                         break;
                     }
@@ -577,10 +587,17 @@ export const ChatView = ({ stagedSnippet, onClearSnippet, onRemoveSnippet, onOpe
                         setHasOlder(true);
                         setHasNewer(true);
                         jumpRequestRef.current = targetId;
+                        if (activeThreadParentRef.current) {
+                            handleViewThread(null);
+                        }
                         break;
                     }
 
                     setIsLoading(true);
+                    jumpRequestRef.current = targetId;
+                    if (activeThreadParentRef.current) {
+                        handleViewThread(null);
+                    }
                     vscode.postMessage({
                         command: 'getMessages',
                         limit: FETCH_LIMIT,
