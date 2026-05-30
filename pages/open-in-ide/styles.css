@@ -69,6 +69,7 @@ body {
   justify-content: center;
   gap: 16px;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .logo-box {
@@ -115,7 +116,7 @@ body {
   font-weight: 600;
   letter-spacing: -0.5px;
   margin: 0;
-  text-align: left;
+  text-align: center;
   color: var(--color-text-main);
   line-height: 1.2;
 }
@@ -426,23 +427,49 @@ body {
     gap: 12px;
   }
   .editor-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
   .editor-card {
-    padding: 14px;
+    padding: 12px 10px;
+  }
+  .card-logo {
+    margin-bottom: 10px;
+    width: 36px;
+    height: 36px;
+  }
+  .editor-name {
+    font-size: 13px;
+  }
+  .editor-desc {
+    font-size: 10.5px;
+  }
+  .card-indicator {
+    top: 10px;
+    right: 10px;
+  }
+  .branding-header {
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 360px) {
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+  .editor-card {
     flex-direction: row;
     align-items: center;
+    padding: 12px;
   }
   .card-logo {
     margin-bottom: 0;
-    margin-right: 14px;
-    width: 40px;
-    height: 40px;
+    margin-right: 12px;
+    flex-shrink: 0;
   }
   .card-indicator {
     top: 50%;
     transform: translateY(-50%);
-    right: 14px;
+    right: 12px;
   }
 }
