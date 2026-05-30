@@ -22,7 +22,13 @@ export async function syncSlackCommand() {
         const result = await slackService.generateSlackOAuthUrl(currentTeam.id);
 
         if ('url' in result) {
-            await vscode.env.openExternal(vscode.Uri.parse(result.url));
+            const uriScheme = vscode.env.uriScheme || "vscode";
+            const urlObj = new URL(result.url);
+            const stateVal = urlObj.searchParams.get("state");
+            if (stateVal) {
+                urlObj.searchParams.set("state", `${stateVal}:${uriScheme}`);
+            }
+            await vscode.env.openExternal(vscode.Uri.parse(urlObj.toString()));
             vscode.window.showInformationMessage(
                 "Slack connection URL generated. Please open the link to complete the authorization."
             );
