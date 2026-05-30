@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linebuzz - Open in IDE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <main class="ide-container">
+
+    <div id="selection-state" class="state-container active">
+      <header class="branding-header">
+        <div class="title-row">
+          <div class="logo-box">
+            <svg class="brand-logo" width="48" height="48" viewBox="40 40 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M70 60 C50 60 50 80 50 100 C50 120 50 140 70 140" stroke="#1dc360" stroke-width="12" stroke-linecap="round" fill="none"/>
+              <path d="M130 60 C150 60 150 80 150 100 C150 120 150 140 130 140" stroke="#4e8072" stroke-width="12" stroke-linecap="round" fill="none"/>
+              <line x1="75" y1="90" x2="125" y2="90" stroke="#109e4a" stroke-width="8" stroke-linecap="round"/>
+              <line x1="75" y1="110" x2="105" y2="110" stroke="#8bb8aa" stroke-width="8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h1 class="main-title">Where Shall We Code?</h1>
+        </div>
+        <p class="main-subtitle">Choose your default editor to open code snippets.</p>
+      </header>
+
+      <section class="grid-section">
+        <div class="editor-grid">
+          <div class="editor-card" data-editor="vscode">
+            <div class="card-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><style>.st0{fill-rule:evenodd;clip-rule:evenodd;fill:#FFFFFF;filter:url(#Adobe_OpacityMaskFilter);} .st1{mask:url(#mask0_1_);} .st2{fill:#0065A9;} .st3{fill:#007ACC;} .st4{fill:#1F9CF0;} .st5{opacity:0.25;} .st6{fill-rule:evenodd;clip-rule:evenodd;fill:url(#SVGID_1_);}</style><defs><filter id="Adobe_OpacityMaskFilter" filterUnits="userSpaceOnUse" x="-0.16" y="0.66" width="256.16" height="254.68"><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs><mask maskUnits="userSpaceOnUse" x="-0.16" y="0.66" width="256.16" height="254.68" id="mask0_1_"><path class="st0" d="M181.53,254.25c4.03,1.57,8.63,1.47,12.7-0.49l52.71-25.36c5.54-2.66,9.06-8.27,9.06-14.42V42.02 c0-6.15-3.52-11.75-9.06-14.42L194.23,2.24c-5.34-2.57-11.59-1.94-16.28,1.47c-0.67,0.49-1.31,1.03-1.91,1.63L75.15,97.39 L31.2,64.02c-4.09-3.11-9.81-2.85-13.61,0.61L3.49,77.45c-4.65,4.23-4.65,11.54-0.01,15.77L41.59,128L3.48,162.77 c-4.64,4.24-4.64,11.55,0.01,15.78l14.1,12.82c3.8,3.46,9.52,3.71,13.61,0.61l43.95-33.36l100.9,92.05 C177.65,252.26,179.52,253.47,181.53,254.25z M192.04,69.89L115.48,128l76.56,58.12V69.89z"/></mask><g class="st1"><path class="st2" d="M246.94,27.64l-52.75-25.4c-6.1-2.94-13.4-1.7-18.19,3.09L3.32,162.77c-4.64,4.24-4.64,11.55,0.01,15.78 l14.1,12.82c3.8,3.46,9.53,3.71,13.62,0.61L239,34.23c6.98-5.29,17-0.32,17,8.44v-0.61C256,35.91,252.48,30.3,246.94,27.64z"/><g><path class="st3" d="M246.94,228.36l-52.75,25.4c-6.1,2.94-13.4,1.7-18.19-3.09L3.32,93.23c-4.64-4.23-4.64-11.55,0.01-15.77 l14.1-12.82c3.8-3.46,9.53-3.71,13.62-0.61L239,221.77c6.98,5.29,17,0.32,17-8.44v0.61C256,220.09,252.48,225.7,246.94,228.36z"/></g><g><path class="st4" d="M194.2,253.76c-6.11,2.94-13.4,1.7-18.2-3.1c5.9,5.9,16,1.72,16-6.63V11.96c0-8.35-10.1-12.53-16-6.63 c4.79-4.79,12.09-6.03,18.2-3.1l52.74,25.36c5.54,2.67,9.07,8.27,9.07,14.42v171.97c0,6.15-3.52,11.75-9.07,14.42L194.2,253.76z"/></g><g class="st5"><linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="127.8439" y1="257.34" x2="127.8439" y2="2.6598" gradientTransform="matrix(1 0 0 -1 0 258)"><stop offset="0" style="stop-color:#FFFFFF"/><stop offset="1" style="stop-color:#FFFFFF;stop-opacity:0"/></linearGradient><path class="st6" d="M181.38,254.25c4.03,1.57,8.63,1.47,12.7-0.49l52.71-25.36c5.54-2.66,9.06-8.27,9.06-14.42V42.02 c0-6.15-3.52-11.75-9.06-14.42L194.08,2.24c-5.34-2.57-11.59-1.94-16.28,1.47c-0.67,0.49-1.31,1.03-1.91,1.63L74.99,97.39 L31.04,64.02c-4.09-3.11-9.81-2.85-13.61,0.61L3.33,77.45c-4.65,4.23-4.65,11.54-0.01,15.78L41.44,128L3.32,162.77 c-4.64,4.24-4.64,11.55,0.01,15.78l14.1,12.82c3.8,3.46,9.52,3.71,13.61,0.61l43.95-33.36l100.9,92.05 C177.49,252.26,179.36,253.47,181.38,254.25z M191.88,69.89L115.32,128l76.56,58.12V69.89z"/></g></g></svg>
+            </div>
+            <div class="card-info">
+              <h3 class="editor-name">VS Code</h3>
+              <p class="editor-desc">Open Source AI Editor</p>
+            </div>
+            <div class="card-indicator"></div>
+          </div>
+
+          <div class="editor-card" data-editor="cursor">
+            <div class="card-logo">
+              <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g clip-path="url(#prefix__clip0_5_17)"><rect width="512" height="512" rx="122" fill="#000"/><g clip-path="url(#prefix__clip1_5_17)"><mask id="prefix__a" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="85" y="89" width="343" height="334"><path d="M85 89h343v334H85V89z" fill="#fff"/></mask><g mask="url(#prefix__a)"><path d="M255.428 423l148.991-83.5L255.428 256l-148.99 83.5 148.99 83.5z" fill="url(#prefix__paint0_linear_5_17)"/><path d="M404.419 339.5v-167L255.428 89v167l148.991 83.5z" fill="url(#prefix__paint1_linear_5_17)"/><path d="M255.428 89l-148.99 83.5v167l148.99-83.5V89z" fill="url(#prefix__paint2_linear_5_17)"/><path d="M404.419 172.5L255.428 423V256l148.991-83.5z" fill="#E4E4E4"/><path d="M404.419 172.5L255.428 256l-148.99-83.5h297.981z" fill="#fff"/></g></g></g><defs><linearGradient id="prefix__paint0_linear_5_17" x1="255.428" y1="256" x2="255.428" y2="423" gradientUnits="userSpaceOnUse"><stop offset=".16" stop-color="#fff" stop-opacity=".39"/><stop offset=".658" stop-color="#fff" stop-opacity=".8"/></linearGradient><linearGradient id="prefix__paint1_linear_5_17" x1="404.419" y1="173.015" x2="257.482" y2="261.497" gradientUnits="userSpaceOnUse"><stop offset=".182" stop-color="#fff" stop-opacity=".31"/><stop offset=".715" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="prefix__paint2_linear_5_17" x1="255.428" y1="89" x2="112.292" y2="342.802" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".6"/><stop offset=".667" stop-color="#fff" stop-opacity=".22"/></linearGradient><clipPath id="prefix__clip0_5_17"><path fill="#fff" d="M0 0h512v512H0z"/></clipPath><clipPath id="prefix__clip1_5_17"><path fill="#fff" transform="translate(85 89)" d="M0 0h343v334H0z"/></clipPath></defs></svg>
+            </div>
+            <div class="card-info">
+              <h3 class="editor-name">Cursor</h3>
+              <p class="editor-desc">Build with AI</p>
+            </div>
+            <div class="card-indicator"></div>
+          </div>
+
+          <div class="editor-card" data-editor="windsurf">
+            <div class="card-logo">
+              <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g clip-path="url(#ws_clip0)"><g clip-path="url(#ws_clip1)"><path fill-rule="evenodd" clip-rule="evenodd" d="M507.307 106.752h-4.864a46.653 46.653 0 00-43.025 28.969 46.66 46.66 0 00-3.482 17.879v104.789c0 20.907-17.152 37.867-37.547 37.867a38.785 38.785 0 01-31.402-16.491l-106.07-152.832a46.865 46.865 0 00-38.613-20.266c-24.192 0-45.952 20.736-45.952 46.357v105.387c0 20.906-17.003 37.866-37.547 37.866-12.16 0-24.234-6.165-31.402-16.49L8.704 108.757C6.016 104.917 0 106.816 0 111.531v91.392c0 4.608 1.408 9.088 4.01 12.885l116.801 168.299c6.912 9.941 17.066 17.322 28.821 20.01 29.376 6.742 56.427-16.085 56.427-45.162V253.653c0-20.906 16.789-37.866 37.546-37.866h.043c12.501 0 24.213 6.144 31.403 16.49L381.12 385.088a45.872 45.872 0 0038.613 20.267c24.704 0 45.888-20.758 45.888-46.358V253.632c0-20.907 16.79-37.867 37.547-37.867h4.139c2.602 0 4.693-2.133 4.693-4.736v-99.562a4.7 4.7 0 00-1.366-3.34 4.705 4.705 0 00-3.327-1.396v.021z" fill="#fff"/></g></g><defs><clipPath id="ws_clip0"><path fill="#fff" d="M0 0h512v512H0z"/></clipPath><clipPath id="ws_clip1"><path fill="#fff" d="M0 0h512v512H0z"/></clipPath></defs></svg>
+            </div>
+            <div class="card-info">
+              <h3 class="editor-name">Windsurf</h3>
+              <p class="editor-desc">Tab Tab Tab...Ship</p>
+            </div>
+            <div class="card-indicator"></div>
+          </div>
+
+          <div class="editor-card" data-editor="antigravity">
+            <div class="card-logo">
+              <svg height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Antigravity</title><mask height="23" id="lobe-icons-antigravity-0-_R_0_" maskUnits="userSpaceOnUse" width="24" x="0" y="1"><path d="M21.751 22.607c1.34 1.005 3.35.335 1.508-1.508C17.73 15.74 18.904 1 12.037 1 5.17 1 6.342 15.74.815 21.1c-2.01 2.009.167 2.511 1.507 1.506 5.192-3.517 4.857-9.714 9.715-9.714 4.857 0 4.522 6.197 9.714 9.715z" fill="#fff"></path></mask><g mask="url(#lobe-icons-antigravity-0-_R_0_)"><g filter="url(#lobe-icons-antigravity-1-_R_0_)"><path d="M-1.018-3.992c-.408 3.591 2.686 6.89 6.91 7.37 4.225.48 7.98-2.043 8.387-5.633.408-3.59-2.686-6.89-6.91-7.37-4.225-.479-7.98 2.043-8.387 5.633z" fill="#FFE432"></path></g><g filter="url(#lobe-icons-antigravity-2-_R_0_)"><path d="M15.269 7.747c1.058 4.557 5.691 7.374 10.348 6.293 4.657-1.082 7.575-5.653 6.516-10.21-1.058-4.556-5.691-7.374-10.348-6.292-4.657 1.082-7.575 5.653-6.516 10.21z" fill="#FC413D"></path></g><g filter="url(#lobe-icons-antigravity-3-_R_0_)"><path d="M-12.443 10.804c1.338 4.703 7.36 7.11 13.453 5.378 6.092-1.733 9.947-6.95 8.61-11.652C8.282-.173 2.26-2.58-3.833-.848-9.925.884-13.78 6.1-12.443 10.804z" fill="#00B95C"></path></g><g filter="url(#lobe-icons-antigravity-4-_R_0_)"><path d="M-12.443 10.804c1.338 4.703 7.36 7.11 13.453 5.378 6.092-1.733 9.947-6.95 8.61-11.652C8.282-.173 2.26-2.58-3.833-.848-9.925.884-13.78 6.1-12.443 10.804z" fill="#00B95C"></path></g><g filter="url(#lobe-icons-antigravity-5-_R_0_)"><path d="M-7.608 14.703c3.352 3.424 9.126 3.208 12.896-.483 3.77-3.69 4.108-9.459.756-12.883C2.69-2.087-3.083-1.871-6.853 1.82c-3.77 3.69-4.108 9.458-.755 12.883z" fill="#00B95C"></path></g><g filter="url(#lobe-icons-antigravity-6-_R_0_)"><path d="M9.932 27.617c1.04 4.482 5.384 7.303 9.7 6.3 4.316-1.002 6.971-5.448 5.93-9.93-1.04-4.483-5.384-7.304-9.7-6.301-4.316 1.002-6.971 5.448-5.93 9.93z" fill="#3186FF"></path></g><g filter="url(#lobe-icons-antigravity-7-_R_0_)"><path d="M2.572-8.185C.392-3.329 2.778 2.472 7.9 4.771c5.122 2.3 11.042.227 13.222-4.63 2.18-4.855-.205-10.656-5.327-12.955-5.122-2.3-11.042-.227-13.222 4.63z" fill="#FBBC04"></path></g><g filter="url(#lobe-icons-antigravity-8-_R_0_)"><path d="M-3.267 38.686c-5.277-2.072 3.742-19.117 5.984-24.83 2.243-5.712 8.34-8.664 13.616-6.592 5.278 2.071 11.533 13.482 9.29 19.195-2.242 5.713-23.613 14.298-28.89 12.227z" fill="#3186FF"></path></g><g filter="url(#lobe-icons-antigravity-9-_R_0_)"><path d="M28.71 17.471c-1.413 1.649-5.1.808-8.236-1.878-3.135-2.687-4.531-6.201-3.118-7.85 1.412-1.649 5.1-.808 8.235 1.878s4.532 6.2 3.119 7.85z" fill="#749BFF"></path></g><g filter="url(#lobe-icons-antigravity-10-_R_0_)"><path d="M18.163 9.077c5.81 3.93 12.502 4.19 14.946.577 2.443-3.612-.287-9.727-6.098-13.658-5.81-3.931-12.502-4.19-14.946-.577-2.443 3.612.287 9.727 6.098 13.658z" fill="#FC413D"></path></g><g filter="url(#lobe-icons-antigravity-11-_R_0_)"><path d="M-.915 2.684c-1.44 3.473-.97 6.967 1.05 7.804 2.02.837 4.824-1.3 6.264-4.772 1.44-3.473.97-6.967-1.05-7.804-2.02-.837-4.824 1.3-6.264 4.772z" fill="#FFEE48"></path></g></g><defs><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="17.587" id="lobe-icons-antigravity-1-_R_0_" width="19.838" x="-3.288" y="-11.917"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="1.117"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="38.565" id="lobe-icons-antigravity-2-_R_0_" width="38.9" x="4.251" y="-13.493"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="5.4"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="36.517" id="lobe-icons-antigravity-3-_R_0_" width="40.955" x="-21.889" y="-10.592"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.591"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="36.517" id="lobe-icons-antigravity-4-_R_0_" width="40.955" x="-21.889" y="-10.592"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.591"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="36.595" id="lobe-icons-antigravity-5-_R_0_" width="36.632" x="-19.099" y="-10.278"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.591"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="34.087" id="lobe-icons-antigravity-6-_R_0_" width="33.533" x=".981" y="8.758"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.363"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="35.276" id="lobe-icons-antigravity-7-_R_0_" width="35.978" x="-6.143" y="-21.659"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.954"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="46.523" id="lobe-icons-antigravity-8-_R_0_" width="45.114" x="-11.96" y="-.46"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.531"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="24.054" id="lobe-icons-antigravity-9-_R_0_" width="25.094" x="10.485" y=".58"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.159"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="30.007" id="lobe-icons-antigravity-10-_R_0_" width="33.508" x="5.833" y="-12.467"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="2.669"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="26.151" id="lobe-icons-antigravity-11-_R_0_" width="22.194" x="-8.355" y="-8.876"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.303"></feGaussianBlur></filter></defs></svg>
+            </div>
+            <div class="card-info">
+              <h3 class="editor-name">Antigravity</h3>
+              <p class="editor-desc">Experience liftoff</p>
+            </div>
+            <div class="card-indicator"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="action-section">
+        <button id="save-btn" class="btn btn-action font-mono" disabled>
+          <span>CONFIRM PREFERENCE</span>
+          <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </section>
+
+      <section class="suggestion-section">
+        <p class="suggestion-text font-mono">
+          Your selection will be stored locally and used automatically the next time you open code.
+        </p>
+      </section>
+    </div>
+
+    <div id="redirect-state" class="state-container">
+      <header class="branding-header">
+        <div class="title-row">
+          <div id="redirect-logo-box"></div>
+          <h1 class="main-title" id="redirect-title">Opening in IDE...</h1>
+        </div>
+        <p class="main-subtitle" id="redirect-subtitle">Launching your preference. Hold tight!</p>
+      </header>
+
+      <section class="progress-section">
+        <div class="progress-ring-container">
+          <svg class="progress-ring" width="120" height="120">
+            <circle class="progress-ring-bg" cx="60" cy="60" r="52" stroke="rgba(255, 255, 255, 0.04)" stroke-width="4" fill="none"/>
+            <circle class="progress-ring-indicator" cx="60" cy="60" r="52" stroke="var(--color-brand)" stroke-width="4" stroke-linecap="round" fill="none"/>
+          </svg>
+          <div class="countdown-text font-mono" id="countdown-val">3</div>
+        </div>
+      </section>
+
+      <section class="action-section">
+        <button id="cancel-btn" class="btn btn-action secondary font-mono">
+          <span>CHANGE PREFERENCE</span>
+        </button>
+      </section>
+
+      <section class="suggestion-section">
+        <p class="suggestion-text font-mono">
+          Click 'Change Preference' to choose another IDE.<br>
+        </p>
+      </section>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

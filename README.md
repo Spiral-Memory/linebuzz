@@ -3,7 +3,7 @@
 ## **Overview 📘**
 
 **LineBuzz** brings real-time collaboration directly into Visual Studio Code.
-Stay in flow with your team using built-in huddles, team management, and persistent chat context—all without leaving your editor.
+Stay in flow with your team using built-in huddles, team management, and persistent chat context - all without leaving your editor.
 
 ## **Features ✨**
 
@@ -55,7 +55,7 @@ That’s it -> LineBuzz will start running in the new window.
    - **Create a Team**: Use the `LineBuzz: Create Team` command or header action.
    - **Join a Team**: Enter a Team ID using `LineBuzz: Join Team`.
 3. **Collaborate**: Open the **LineBuzz Huddle** sidebar to start chatting with your team in real-time.
-4. **Code Sharing**: Paste code snippets directly into chat—LineBuzz handles formatting and highlighting automatically.
+4. **Code Sharing**: Paste code snippets directly into chat and LineBuzz handles formatting and highlighting automatically.
 5. **Slack Sync**: Connect a channel via the **Sync Slack** title bar icon (admins only). Messages sent in Slack automatically sync to LineBuzz, and you can use the Slack checkbox in the chat input to selectively sync huddle messages back.
 
 ## **Roadmap 🛣️**
@@ -69,6 +69,6 @@ That’s it -> LineBuzz will start running in the new window.
 ## **Contributing 🤝**
 
 Contributions are always welcome.
-Fork the repository, open it in VS Code, and use the built-in debugger to test your changes.
+Fork the repository, open it in your favorite IDE, and use the built-in debugger to test your changes.
 
 For significant updates, open an issue first to discuss your approach.
