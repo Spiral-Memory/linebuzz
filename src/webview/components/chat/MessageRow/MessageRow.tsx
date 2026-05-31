@@ -23,7 +23,7 @@ interface MessageRowProps {
 
 export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQuoteClick, onThreadClick, replyCount, onViewThread, isThreadView }: MessageRowProps) => {
     const isSlack = message.source === 'slack';
-    const displayName = isSlack 
+    const displayName = isSlack
         ? (message.source_metadata?.display_name || message.source_metadata?.username || message.u?.display_name || message.u?.username || 'Slack User')
         : (message.u?.display_name || message.u?.username || 'Unknown');
     const avatarUrl = isSlack
@@ -40,6 +40,17 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQ
             return q.source_metadata.display_name || q.source_metadata.username || 'Slack User';
         }
         return q.u?.display_name || q.u?.username || 'User';
+    };
+
+    const formatQuotedContent = (text: string | null) => {
+        let formatted = text || '';
+        formatted = formatted.replace(/<@U[A-Z0-9]+(?:\|([^>]+))?>/g, (match, username) => {
+            return `@${username || match.slice(2, -1)}`;
+        });
+        formatted = formatted.replace(/<#C[A-Z0-9]+(?:\|([^>]+))?>/g, (match, channelname) => {
+            return `#${channelname || match.slice(2, -1)}`;
+        });
+        return formatted.replace(/\s+/g, ' ');
     };
 
     return (
@@ -86,7 +97,7 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQ
                             {getQuotedUserName()}
                         </div>
                         <div class={styles['quoted-content']}>
-                            {message.quoted_message.content}
+                            {formatQuotedContent(message.quoted_message.content)}
                         </div>
                     </div>
                 )}
