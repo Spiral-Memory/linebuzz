@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as fs from 'fs';
 import { Snippet } from "../../types/IAttachment";
 import { logger } from '../utils/logger';
 import { RelocatorEngine } from "./RelocationService";
@@ -127,19 +128,53 @@ export class NavigatorService implements vscode.UriHandler {
         return { success: false, reason: 'file_not_found' };
     }
 
-    public async openFileByPath(filePath: string, startLine?: number, endLine?: number): Promise<boolean> {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-            logger.warn('NavigatorService', 'No workspace folders are open.');
+    public async openFileByPath(filePath: string, startLine?: number, endLine?: number, remoteUrl?: string): Promise<boolean> {
+        let fileUri: vscode.Uri | undefined;
+
+        if (remoteUrl) {
+            const gitExtension = vscode.extensions.getExtension('vscode.git');
+            if (gitExtension) {
+                if (!gitExtension.isActive) {
+                    try {
+                        await gitExtension.activate();
+                    } catch (e) {
+                        logger.error('NavigatorService', 'Failed to activate git extension', e);
+                    }
+                }
+                try {
+                    const api = gitExtension.exports.getAPI(1);
+                    const matchingRepo = findRepositoryByRemote(api, remoteUrl);
+                    if (matchingRepo) {
+                        fileUri = resolveFilePath(matchingRepo, filePath);
+                    }
+                } catch (e) {
+                    logger.error('NavigatorService', 'Error mapping repository', e);
+                }
+            }
+        }
+
+        if (!fileUri) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                for (const folder of workspaceFolders) {
+                    const candidateUri = vscode.Uri.joinPath(folder.uri, filePath);
+                    if (fs.existsSync(candidateUri.fsPath)) {
+                        fileUri = candidateUri;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!fileUri) {
+            vscode.window.showWarningMessage(`File not found in workspace: ${filePath}. Please make sure you have opened the correct project/workspace.`);
             return false;
         }
 
-        const workspaceUri = workspaceFolders[0].uri;
-        const fileUri = vscode.Uri.joinPath(workspaceUri, filePath);
         try {
             const doc = await vscode.workspace.openTextDocument(fileUri);
             const editor = await vscode.window.showTextDocument(doc);
-            
+
             if (startLine !== undefined) {
                 const lineIdx = Math.max(0, startLine - 1);
                 const safeLineIdx = Math.min(lineIdx, doc.lineCount - 1);
@@ -179,9 +214,10 @@ export class NavigatorService implements vscode.UriHandler {
             const filePath = params.get('filePath');
             const startLine = params.get('startLine') ? parseInt(params.get('startLine')!, 10) : undefined;
             const endLine = params.get('endLine') ? parseInt(params.get('endLine')!, 10) : undefined;
+            const remoteUrl = params.get('remoteUrl') || params.get('remote_url') || undefined;
 
             if (filePath) {
-                const opened = await this.openFileByPath(filePath, startLine, endLine);
+                const opened = await this.openFileByPath(filePath, startLine, endLine, remoteUrl);
                 if (!opened) {
                     await vscode.commands.executeCommand('workbench.view.extension.linebuzz-view-container');
                     await vscode.commands.executeCommand('linebuzz.chatpanel.focus');

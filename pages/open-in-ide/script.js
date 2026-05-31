@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const filePath = urlParams.get('filePath') || urlParams.get('file_path');
   const startLine = urlParams.get('startLine') || urlParams.get('start_line') || '1';
   const endLine = urlParams.get('endLine') || urlParams.get('end_line') || '1';
+  const remoteUrl = urlParams.get('remoteUrl') || urlParams.get('remote_url') || '';
 
   let selectedEditor = null;
   let countdownTimer = null;
@@ -163,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function triggerDeepLink(editor) {
     const scheme = editor;
-    const protocolLink = `${scheme}://SpiralMemory.linebuzz/open?filePath=${encodeURIComponent(filePath)}&startLine=${startLine}&endLine=${endLine}`;
+    const protocolLink = `${scheme}://SpiralMemory.linebuzz/open?filePath=${encodeURIComponent(filePath)}&startLine=${startLine}&endLine=${endLine}&remoteUrl=${encodeURIComponent(remoteUrl)}`;
     window.location.href = protocolLink;
   }
 });
