@@ -113,7 +113,15 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand("linebuzz.jumpToMessage", (messageId: string) =>
                 chatPanelProvider.jumpToMessage(messageId)
             ),
-            vscode.commands.registerCommand("linebuzz.syncSlack", syncSlackCommand)
+            vscode.commands.registerCommand("linebuzz.syncSlack", syncSlackCommand),
+            vscode.commands.registerCommand("linebuzz.copyInviteCode", async () => {
+                const teamService = Container.get("TeamService");
+                const code = await teamService.getInviteCode();
+                if (code) {
+                    await vscode.env.clipboard.writeText(code);
+                    vscode.window.showInformationMessage("Invite code copied to clipboard!");
+                }
+            })
         );
 
         context.subscriptions.push(

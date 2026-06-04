@@ -178,6 +178,20 @@ export class TeamService {
         return this.currentTeam;
     }
 
+    public async getInviteCode(): Promise<string | undefined> {
+        if (!this.currentTeam) {
+            throw new Error("No active team selected.");
+        }
+        try {
+            const code = await this.teamRepo.getInviteCode(this.currentTeam.id);
+            return code;
+        } catch (error: any) {
+            logger.error("TeamService", "Error retrieving invite code", error);
+            vscode.window.showErrorMessage(`Failed to retrieve invite code: ${error.message}`);
+            return undefined;
+        }
+    }
+
     public dispose() {
         this._onDidChangeTeam.dispose();
     }

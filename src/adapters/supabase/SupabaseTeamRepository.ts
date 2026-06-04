@@ -251,4 +251,30 @@ export class SupabaseTeamRepository implements ITeamRepository {
         }
     }
 
+    public async getInviteCode(teamId: string): Promise<string> {
+        const supabase = SupabaseClient.getInstance().client;
+        logger.info("SupabaseTeamRepository", `Retrieving invite code for team: ${teamId}`);
+
+        const { data, error } = await supabase.rpc('get_team_invite_code', {
+            p_team_id: teamId
+        });
+
+        if (error) {
+            logger.error("SupabaseTeamRepository", "RPC call failed", error);
+            throw new Error(`RPC call failed: ${error.message}`);
+        }
+
+        const response = data as any;
+
+        if (response.status === 'error') {
+            throw new Error(response.message);
+        }
+
+        if (response.status === 'success' && response.invite_code) {
+            return response.invite_code;
+        }
+
+        throw new Error(`Unexpected response status: ${response.status}`);
+    }
+
 }

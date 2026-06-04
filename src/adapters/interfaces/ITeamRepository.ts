@@ -15,4 +15,5 @@ export interface ITeamRepository {
     disconnectSlack(teamId: string): Promise<void>;
     isSlackConnected(teamId: string): Promise<boolean>;
     getSlackActiveChannel?(teamId: string): Promise<string | null>;
+    getInviteCode(teamId: string): Promise<string>;
 }
