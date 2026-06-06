@@ -17,6 +17,7 @@ export class SupabaseClient {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        storageKey: 'linebuzz-auth-token',
       },
     });
   }

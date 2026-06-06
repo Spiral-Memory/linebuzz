@@ -77,6 +77,11 @@
         "title": "Copy Team Invite Code",
         "category": "LineBuzz",
         "icon": "$(key)"
+      },
+      {
+        "command": "linebuzz.logout",
+        "title": "Sign Out",
+        "category": "LineBuzz"
       }
     ],
     "keybindings": [
@@ -108,6 +113,10 @@
         {
           "command": "linebuzz.copyInviteCode",
           "when": "extension.isLoggedIn && linebuzz.hasTeam && linebuzz.isAdmin"
+        },
+        {
+          "command": "linebuzz.logout",
+          "when": "extension.isLoggedIn"
         }
       ],
       "editor/context": [

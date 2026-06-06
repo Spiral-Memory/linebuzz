@@ -41,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
         authService = new AuthService(supbaseAuthRepository);
         context.subscriptions.push(authService);
         Container.register('AuthService', authService);
-        await authService.initializeSession(false);
+        await loginCommand({ createIfNone: false });
 
         const supabaseMessageRepository = new SupabaseMessageRepository();
         const messageService = new MessageService(supabaseMessageRepository);
@@ -88,6 +88,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand('linebuzz.login', loginCommand),
+            vscode.commands.registerCommand('linebuzz.logout', async () => {
+                if (authService) {
+                    await authService.signOut();
+                }
+            }),
             vscode.commands.registerCommand('linebuzz.createTeam', () => createTeamCommand()),
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
@@ -138,7 +143,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (authService) {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(async () => {
-                await authService.initializeSession();
+                await loginCommand({ createIfNone: false });
             }, 500);
         } else {
             logger.error("Extension", "AuthService not initialized when onDidChangeSessions fired.");

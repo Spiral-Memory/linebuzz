@@ -4,6 +4,7 @@ import { Container } from '../services/ServiceContainer';
 import { MessageResponse } from '../../types/IMessage';
 import { Storage } from '../platform/storage';
 import { SupabaseClient } from '../../adapters/supabase/SupabaseClient';
+import { loginCommand } from '../commands/AuthCommand';
 
 export class ChatPanelProvider extends BaseWebviewProvider {
     public static readonly viewId = 'linebuzz.chatpanel';
@@ -115,8 +116,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 Storage.deleteGlobal('custom_supabase_url');
                 Storage.deleteGlobal('custom_supabase_anon_key');
                 SupabaseClient.resetInstance();
-                const authService = Container.get('AuthService');
-                await authService.initializeSession(false);
+                await loginCommand({ createIfNone: false });
                 await this.updateIdentity();
                 break;
             }
