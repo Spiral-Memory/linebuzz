@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/Spiral-Memory/LineBuzz.git"
   },
-  "version": "0.2.1",
+  "version": "0.3.0",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -44,7 +44,7 @@
       },
       {
         "command": "linebuzz.captureSnippet",
-        "title": "Capture Snippet",
+        "title": "Share Code to LineBuzz",
         "category": "LineBuzz"
       },
       {
@@ -56,6 +56,32 @@
         "command": "linebuzz.deactivateCLens",
         "title": "Hide Inline Discussions",
         "icon": "$(coffee)"
+      },
+      {
+        "command": "linebuzz.stepMuted",
+        "title": "Notifications: Muted",
+        "icon": "$(bell-slash)"
+      },
+      {
+        "command": "linebuzz.stepNotify",
+        "title": "Notifications: Notify",
+        "icon": "$(bell-dot)"
+      },
+      {
+        "command": "linebuzz.syncSlack",
+        "title": "Sync Slack",
+        "icon": "$(symbol-numeric)"
+      },
+      {
+        "command": "linebuzz.copyInviteCode",
+        "title": "Copy Team Invite Code",
+        "category": "LineBuzz",
+        "icon": "$(key)"
+      },
+      {
+        "command": "linebuzz.logout",
+        "title": "Sign Out",
+        "category": "LineBuzz"
       }
     ],
     "keybindings": [
@@ -64,12 +90,6 @@
         "key": "alt+b",
         "mac": "alt+b",
         "when": "editorTextFocus"
-      }
-    ],
-    "submenus": [
-      {
-        "id": "linebuzz.menu",
-        "label": "LineBuzz"
       }
     ],
     "menus": {
@@ -89,19 +109,21 @@
         {
           "command": "linebuzz.leaveTeam",
           "when": "extension.isLoggedIn && linebuzz.hasTeam"
+        },
+        {
+          "command": "linebuzz.copyInviteCode",
+          "when": "extension.isLoggedIn && linebuzz.hasTeam && linebuzz.isAdmin"
+        },
+        {
+          "command": "linebuzz.logout",
+          "when": "extension.isLoggedIn"
         }
       ],
       "editor/context": [
         {
-          "submenu": "linebuzz.menu",
+          "command": "linebuzz.captureSnippet",
           "group": "9_cutcopypaste@99",
           "when": "editorHasSelection"
-        }
-      ],
-      "linebuzz.menu": [
-        {
-          "command": "linebuzz.captureSnippet",
-          "group": "9_cutcopypaste@99"
         }
       ],
       "view/title": [
@@ -114,6 +136,21 @@
           "command": "linebuzz.deactivateCLens",
           "when": "view == linebuzz.chatpanel && linebuzz.isCLensActive",
           "group": "navigation"
+        },
+        {
+          "command": "linebuzz.stepMuted",
+          "when": "view == linebuzz.chatpanel && (!linebuzz.notificationMode || linebuzz.notificationMode == 'mute')",
+          "group": "navigation@1"
+        },
+        {
+          "command": "linebuzz.stepNotify",
+          "when": "view == linebuzz.chatpanel && linebuzz.notificationMode == 'notify'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "linebuzz.syncSlack",
+          "when": "view == linebuzz.chatpanel && linebuzz.isAdmin",
+          "group": "navigation@2"
         }
       ]
     },
@@ -156,6 +193,7 @@
     "@types/he": "^1.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/play-sound": "^1.1.2",
     "@types/vscode": "^1.102.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
@@ -173,6 +211,7 @@
     "@supabase/supabase-js": "^2.54.0",
     "@types/dompurify": "^3.0.5",
     "@types/marked": "^5.0.2",
+    "compare-versions": "^6.1.1",
     "date-fns": "^4.1.0",
     "dedent": "^1.7.1",
     "dompurify": "^3.3.1",
@@ -184,6 +223,7 @@
     "lru-cache": "^11.2.4",
     "marked": "^17.0.1",
     "normalize-url": "^8.1.1",
+    "play-sound": "^1.1.6",
     "seti-file-icons": "^0.0.8"
   }
 }

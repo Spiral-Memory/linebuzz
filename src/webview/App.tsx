@@ -13,6 +13,9 @@ interface AppState {
   hasTeam: boolean;
   isLoading: boolean;
   stagedSnippet?: Snippet[] | [];
+  isSlackConnected?: boolean;
+  slackChannel?: string | null;
+  customServerUrl?: string | null;
 }
 
 export function App() {
@@ -21,7 +24,8 @@ export function App() {
     isLoggedIn: false,
     hasTeam: false,
     isLoading: true,
-    stagedSnippet: []
+    stagedSnippet: [],
+    isSlackConnected: false
   });
 
   useEffect(() => {
@@ -33,6 +37,9 @@ export function App() {
             ...prev,
             isLoggedIn: message.state.isLoggedIn,
             hasTeam: message.state.hasTeam,
+            isSlackConnected: message.state.isSlackConnected,
+            slackChannel: message.state.slackChannel,
+            customServerUrl: message.state.customServerUrl,
             isLoading: false
           }));
           break;
@@ -79,7 +86,13 @@ export function App() {
   }
 
   if (!state.isLoggedIn || !state.hasTeam) {
-    return <ConnectView isLoggedIn={state.isLoggedIn} hasTeam={state.hasTeam} />;
+    return (
+      <ConnectView
+        isLoggedIn={state.isLoggedIn}
+        hasTeam={state.hasTeam}
+        customServerUrl={state.customServerUrl}
+      />
+    );
   }
 
   return (
@@ -90,6 +103,8 @@ export function App() {
         onClearSnippet={handleClearSnippet}
         onRemoveSnippet={handleRemoveSnippet}
         onOpenSnippet={handleOpenSnippet}
+        isSlackConnected={state.isSlackConnected}
+        slackChannel={state.slackChannel}
       />
     </Fragment>
   );

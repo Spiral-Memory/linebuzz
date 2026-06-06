@@ -49,3 +49,114 @@
 .connect-btn.secondary:hover {
     background-color: var(--secondary-hover);
 }
+
+.server-customization {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.server-code {
+    font-family: var(--vscode-editor-font-family, monospace);
+    background-color: var(--input-background);
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-size: 10px;
+}
+
+.link-btn, .reset-link {
+    background: none;
+    border: none;
+    color: var(--vscode-textLink-foreground, #3794ff);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    text-decoration: underline;
+    opacity: 0.8;
+    display: inline;
+}
+
+.link-btn:hover, .reset-link:hover {
+    opacity: 1;
+    color: var(--primary-hover);
+}
+
+.custom-server-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.form-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-label {
+    font-size: 10px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.form-input {
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--input-foreground);
+    font-size: 11px;
+    outline: none;
+}
+
+.form-input:focus {
+    border-color: var(--primary-color);
+}
+
+.form-error {
+    font-size: 11px;
+    color: #e06c75;
+}
+
+.form-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.form-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-btn.primary {
+    background-color: var(--primary-color);
+    color: var(--primary-foreground);
+}
+
+.form-btn.primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.form-btn.secondary {
+    background-color: var(--secondary-color);
+    color: var(--secondary-foreground);
+}
+
+.form-btn.secondary:hover {
+    background-color: var(--secondary-hover);
+}

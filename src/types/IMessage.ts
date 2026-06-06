@@ -13,10 +13,23 @@ export interface MessageResponse {
         display_name: string;
         avatar_url: string;
     };
+    source?: string;
+    source_metadata?: {
+        display_name?: string;
+        username?: string;
+        avatar_url?: string;
+    };
     userType?: 'me' | 'other';
+    quoted_id?: string;
+    quoted_message?: MessageResponse;
+    attachments?: any[];
+    reply_count?: number;
 }
 
 export interface MessageRequest {
     content: string;
     attachments: Attachment[];
+    quoted_id?: string;
+    parent_id?: string;
+    sync_to_slack?: boolean;
 }

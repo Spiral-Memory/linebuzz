@@ -7,18 +7,51 @@ import styles from './MessageRow.module.css';
 import { SnippetAttachment } from '../MessageAttachment/SnippetAttachment';
 import { Snippet } from '../../../../types/IAttachment';
 
+import { MessageResponse } from '../../../../types/IMessage';
+
 interface MessageRowProps {
-    message: any;
+    message: MessageResponse;
     onOpenSnippet?: (snippet: Snippet, requestId?: string) => void;
     isHighlighted?: boolean;
+    onReply?: (message: MessageResponse) => void;
+    onQuoteClick?: (messageId: string) => void;
+    onThreadClick?: (message: MessageResponse) => void;
+    replyCount?: number;
+    onViewThread?: () => void;
+    isThreadView?: boolean;
 }
 
-export const MessageRow = ({ message, onOpenSnippet, isHighlighted }: MessageRowProps) => {
-    const displayName = message.u?.display_name || message.u?.username || 'Unknown';
-    const avatarUrl = message.u?.avatar_url;
+export const MessageRow = ({ message, onOpenSnippet, isHighlighted, onReply, onQuoteClick, onThreadClick, replyCount, onViewThread, isThreadView }: MessageRowProps) => {
+    const isSlack = message.source === 'slack';
+    const displayName = isSlack
+        ? (message.source_metadata?.display_name || message.source_metadata?.username || message.u?.display_name || message.u?.username || 'Slack User')
+        : (message.u?.display_name || message.u?.username || 'Unknown');
+    const avatarUrl = isSlack
+        ? (message.source_metadata?.avatar_url || message.u?.avatar_url)
+        : message.u?.avatar_url;
     const initials = getInitials(displayName);
     const avatarColor = getAvatarColor(displayName);
     const isMe = message.userType === 'me';
+
+    const getQuotedUserName = () => {
+        if (!message.quoted_message) return '';
+        const q = message.quoted_message;
+        if (q.source === 'slack' && q.source_metadata) {
+            return q.source_metadata.display_name || q.source_metadata.username || 'Slack User';
+        }
+        return q.u?.display_name || q.u?.username || 'User';
+    };
+
+    const formatQuotedContent = (text: string | null) => {
+        let formatted = text || '';
+        formatted = formatted.replace(/<@U[A-Z0-9]+(?:\|([^>]+))?>/g, (match, username) => {
+            return `@${username || match.slice(2, -1)}`;
+        });
+        formatted = formatted.replace(/<#C[A-Z0-9]+(?:\|([^>]+))?>/g, (match, channelname) => {
+            return `#${channelname || match.slice(2, -1)}`;
+        });
+        return formatted.replace(/\s+/g, ' ');
+    };
 
     return (
         <div
@@ -54,6 +87,20 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted }: MessageRow
                     {!isMe && <span class={styles['user-name']}>{displayName}</span>}
                     <span class={styles['message-time']}>{formatTime(message.created_at)}</span>
                 </div>
+                {message.quoted_message && (
+                    <div
+                        class={styles['quoted-message']}
+                        onClick={() => message.quoted_id && onQuoteClick?.(message.quoted_id)}
+                        role="button"
+                    >
+                        <div class={styles['quoted-user']}>
+                            {getQuotedUserName()}
+                        </div>
+                        <div class={styles['quoted-content']}>
+                            {formatQuotedContent(message.quoted_message.content)}
+                        </div>
+                    </div>
+                )}
                 <MessageContent content={message.content} isMe={isMe} />
                 {message.attachments && message.attachments.length > 0 && (
                     <div class={styles['attachments-container']}>
@@ -69,6 +116,36 @@ export const MessageRow = ({ message, onOpenSnippet, isHighlighted }: MessageRow
                             }
                             return null;
                         })}
+                    </div>
+                )}
+                {isSlack && (
+                    <span class={styles['slack-text-only-badge']} title="Sent via Slack">
+                        via Slack
+                    </span>
+                )}
+                {replyCount !== undefined && replyCount > 0 && !isThreadView && (
+                    <div class={styles['view-replies-container']}>
+                        <button class={styles['view-replies-button']} onClick={onViewThread}>
+                            <svg class={styles['view-replies-icon']} viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                <path d="M4 2 C4 2 4 8 10 10" />
+                            </svg>
+                            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                        </button>
+                    </div>
+                )}
+            </div>
+            <div class={styles['actions-container']}>
+                <div class={styles['action-button']} onClick={() => onReply?.(message)} title="Quote Message">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 14L4 9L9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M4 9H14C18.4183 9 22 12.5817 22 17V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                {!message.parent_id && !isThreadView && (
+                    <div class={styles['action-button']} onClick={() => onThreadClick?.(message)} title="Reply in thread">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
                     </div>
                 )}
             </div>

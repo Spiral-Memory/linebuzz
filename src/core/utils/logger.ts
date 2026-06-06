@@ -1,4 +1,10 @@
 export const logger = {
+    debug: (context: string, message: string, ...args: any[]): void => {
+        if (process.env.NODE_ENV !== 'production') {
+            log('DEBUG', context, message, args);
+        }
+    },
+
     info: (context: string, message: string, ...args: any[]): void => {
         log('INFO', context, message, args);
     },
@@ -13,7 +19,7 @@ export const logger = {
 };
 
 function log(level: string, context: string, message: string, args: any[]): void {
-    const formattedMessage = `[LineBuzz] [${context}] ${message}`;
+    const formattedMessage = `[LineBuzz] ${level} [${context}] ${message}`;
 
     if (args.length > 0) {
         console.log(formattedMessage, ...args);

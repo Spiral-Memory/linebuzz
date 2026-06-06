@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-06
+
+### Added
+- **Slack Integration**: Added Slack connection options, channel configuration, and support for syncing messages and threads directly with Slack.
+- **Thread Support**: Introduced threaded conversation support with dedicated side panels and message jump navigation.
+- **Custom Server Environments**: Added support for connecting to self-hosted custom server instances with automatic configuration checks.
+- **Client Compatibility Check**: Added automatic validation checks to ensure the local extension matches the host server version.
+- **Improved Code Staging**: Added support for attaching multiple code snippets to messages with improved real-time tracking of code ranges.
+- **Redesigned Auth Flow**: Consolidated login paths into a unified authentication process with native progress indicators.
+- **UI & UX Improvements**: Added page loader indicators, open-in-ide redirection views, landing page view, and error boundaries for improved stability.
+
+### Changed
+- Standardized security configuration names across client and adapter files.
+
+### Fixed
+- Fixed authentication cache issues.
+- Fixed code reference navigation inaccuracies during file-edit shifts.
+- Fixed scrolling layout glitches and improved mobile view responsiveness.
+
 ## [0.2.0] - 2026-02-08
 
 ### Added

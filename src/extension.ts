@@ -9,6 +9,8 @@ import { SupabaseCodeRepository } from "./adapters/supabase/SupabaseCodeReposito
 import { TeamService } from "./core/services/TeamService";
 import { MessageService } from "./core/services/MessageService";
 import { SupabaseMessageRepository } from "./adapters/supabase/SupabaseMessageRepository";
+import { SupabaseActivityRepository } from "./adapters/supabase/SupabaseActivityRepository";
+import { ActivityService } from "./core/services/ActivityService";
 import { loginCommand } from "./core/commands/AuthCommand";
 import { createTeamCommand, joinTeamCommand, leaveTeamCommand } from "./core/commands/TeamCommand";
 import { sendMessageCommand } from "./core/commands/MessageCommand";
@@ -19,8 +21,10 @@ import { SnippetService } from "./core/services/SnippetService";
 import { NavigatorService } from "./core/services/NavigatorService";
 import { ContextLensService } from "./core/services/ContextLensService";
 import { refreshCLensCommand, activateCLensCommand, deactivateCLensCommand, openPeekCommand, showDiffCommand } from "./core/commands/CLensCommand";
+import { syncSlackCommand } from "./core/commands/SlackCommand";
 import { CodeLensProvider } from "./core/providers/CodeLensProvider";
 import { ReadOnlyContentProvider } from "./core/providers/ReadOnlyContentProvider";
+import { NotificationService } from "./core/services/NotificationService";
 
 export async function activate(context: vscode.ExtensionContext) {
     let authService: AuthService | undefined;
@@ -37,11 +41,18 @@ export async function activate(context: vscode.ExtensionContext) {
         authService = new AuthService(supbaseAuthRepository);
         context.subscriptions.push(authService);
         Container.register('AuthService', authService);
-        await authService.initializeSession(false);
+        await loginCommand({ createIfNone: false });
 
         const supabaseMessageRepository = new SupabaseMessageRepository();
         const messageService = new MessageService(supabaseMessageRepository);
         Container.register('MessageService', messageService);
+
+        const supabaseActivityRepository = new SupabaseActivityRepository();
+        const activityService = new ActivityService(supabaseActivityRepository);
+        Container.register('ActivityService', activityService);
+
+        const notificationService = new NotificationService(context);
+        Container.register('NotificationService', notificationService);
 
         const snippetService = new SnippetService();
         context.subscriptions.push(snippetService);
@@ -64,6 +75,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.registerWebviewViewProvider(ChatPanelProvider.viewId, chatPanelProvider)
         );
 
+        notificationService.setChatPanelProvider(chatPanelProvider);
+
         const codeLensProvider = new CodeLensProvider(contextLensService);
         context.subscriptions.push(
             vscode.languages.registerCodeLensProvider({ scheme: 'file' }, codeLensProvider)
@@ -75,9 +88,20 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand('linebuzz.login', loginCommand),
+            vscode.commands.registerCommand('linebuzz.logout', async () => {
+                if (authService) {
+                    await authService.signOut();
+                }
+            }),
             vscode.commands.registerCommand('linebuzz.createTeam', () => createTeamCommand()),
             vscode.commands.registerCommand('linebuzz.joinTeam', joinTeamCommand),
             vscode.commands.registerCommand('linebuzz.leaveTeam', leaveTeamCommand),
+            vscode.commands.registerCommand('linebuzz.stepMuted', async () =>
+                await notificationService.setMode('notify')
+            ),
+            vscode.commands.registerCommand('linebuzz.stepNotify', async () =>
+                await notificationService.setMode('mute')
+            ),
             vscode.commands.registerCommand('linebuzz.sendMessage', sendMessageCommand),
             vscode.commands.registerCommand('linebuzz.captureSnippet', captureSnippetCommand),
             vscode.commands.registerCommand('linebuzz.activateCLens', () =>
@@ -93,7 +117,20 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand("clens.showDiff", showDiffCommand),
             vscode.commands.registerCommand("linebuzz.jumpToMessage", (messageId: string) =>
                 chatPanelProvider.jumpToMessage(messageId)
-            )
+            ),
+            vscode.commands.registerCommand("linebuzz.syncSlack", syncSlackCommand),
+            vscode.commands.registerCommand("linebuzz.copyInviteCode", async () => {
+                const teamService = Container.get("TeamService");
+                const code = await teamService.getInviteCode();
+                if (code) {
+                    await vscode.env.clipboard.writeText(code);
+                    vscode.window.showInformationMessage("Invite code copied to clipboard!");
+                }
+            })
+        );
+
+        context.subscriptions.push(
+            vscode.window.registerUriHandler(navigatorService)
         );
 
     } catch (e) {
@@ -106,7 +143,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (authService) {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(async () => {
-                await authService.initializeSession();
+                await loginCommand({ createIfNone: false });
             }, 500);
         } else {
             logger.error("Extension", "AuthService not initialized when onDidChangeSessions fired.");

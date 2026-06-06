@@ -40,6 +40,13 @@ renderer.link = ({ href, title, text }: { href: string, title?: string | null, t
     return `<a href="${safeHref}" title="${safeTitle}" target="_blank" rel="noopener noreferrer">${text}</a>`;
 };
 
+renderer.text = ({ text }: { text: string }) => {
+    let escaped = htmlEncode(text);
+    escaped = escaped.replace(/%%MENTION%%(.*?)%%ENDMENTION%%/g, '<span class="mention">@$1</span>');
+    escaped = escaped.replace(/%%CHANNEL%%(.*?)%%ENDCHANNEL%%/g, '<span class="channel">#$1</span>');
+    return escaped;
+};
+
 
 marked.use({
     renderer,
@@ -52,7 +59,17 @@ export const MessageContent = ({ content, className = '', isMe = false }: Messag
     const containerRef = useRef<HTMLDivElement>(null);
     const htmlContent = useMemo(() => {
         try {
-            const parsed = marked.parse(content || '', { async: false });
+            let processed = content || '';
+            processed = processed.replace(/<@U[A-Z0-9]+(?:\|([^>]+))?>/g, (match, username) => {
+                const name = username || match.slice(2, -1);
+                return `%%MENTION%%${name}%%ENDMENTION%%`;
+            });
+            processed = processed.replace(/<#C[A-Z0-9]+(?:\|([^>]+))?>/g, (match, channelname) => {
+                const name = channelname || match.slice(2, -1);
+                return `%%CHANNEL%%${name}%%ENDCHANNEL%%`;
+            });
+
+            const parsed = marked.parse(processed, { async: false });
             return DOMPurify.sanitize(parsed as string, {
                 ADD_ATTR: ['target'],
                 FORBID_TAGS: ['style', 'script'],

@@ -43,6 +43,9 @@ async function main() {
     outfile: 'dist/extension.js',
     external: ['vscode'],
     plugins: [esbuildProblemMatcherPlugin],
+    define: {
+      'process.env.NODE_ENV': production ? '"production"' : '"development"',
+    },
   });
 
   const webviewCtx = await esbuild.context({
@@ -58,6 +61,9 @@ async function main() {
       '.js': 'jsx',
     },
     plugins: [esbuildProblemMatcherPlugin],
+    define: {
+      'process.env.NODE_ENV': production ? '"production"' : '"development"',
+    },
   });
 
   if (watch) {

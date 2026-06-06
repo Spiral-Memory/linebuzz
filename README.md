@@ -3,7 +3,7 @@
 ## **Overview 📘**
 
 **LineBuzz** brings real-time collaboration directly into Visual Studio Code.
-Stay in flow with your team using built-in huddles, team management, and persistent chat context—all without leaving your editor.
+Stay in flow with your team using built-in huddles, team management, and persistent chat context - all without leaving your editor.
 
 ## **Features ✨**
 
@@ -15,6 +15,7 @@ Stay in flow with your team using built-in huddles, team management, and persist
 * **Secure Infrastructure**: Built on Supabase for reliable, secure real-time data synchronization.
 * **Inline Code Discussions**: Comment directly on specific lines of code to keep context.
 * **Smart Deep Linking**: Seamlessly navigate between chat messages and referenced code files.
+* **Slack Integration**: Sync huddle messages, threads, and code attachments with interactive deep links (VS Code / GitHub) to/from your Slack workspace.
 
 ## **Development** 🛠️
 
@@ -41,7 +42,7 @@ Create a `.env` file in the project root, based on `.env.example`, and populate 
 
 ```env
 SUPABASE_URL=<your-supabase-url>
-SUPABASE_ANON_KEY=<your-supabase-anon-key>
+SUPABASE_PUBLISHABLE_KEY=<your-supabase-publishable-key>
 ```
 These values connect LineBuzz to your project’s backend for authentication and data sync.
 Press **F5** to launch the extension in a new VS Code window (Extension Development Host).
@@ -54,21 +55,20 @@ That’s it -> LineBuzz will start running in the new window.
    - **Create a Team**: Use the `LineBuzz: Create Team` command or header action.
    - **Join a Team**: Enter a Team ID using `LineBuzz: Join Team`.
 3. **Collaborate**: Open the **LineBuzz Huddle** sidebar to start chatting with your team in real-time.
-4. **Code Sharing**: Paste code snippets directly into chat—LineBuzz handles formatting and highlighting automatically.
+4. **Code Sharing**: Paste code snippets directly into chat and LineBuzz handles formatting and highlighting automatically.
+5. **Slack Sync**: Connect a channel via the **Sync Slack** title bar icon (admins only). Messages sent in Slack automatically sync to LineBuzz, and you can use the Slack checkbox in the chat input to selectively sync huddle messages back.
 
 ## **Roadmap 🛣️**
 
-* **Issue Threads**: Create threads for issues and code discussions.
-* **Team Feed**: Activity stream for team events and updates.
-* **Mentions & Notifications**: @mention team members and get notified.
-* **E2E**: Support end-to-end encryption
-* **Integrations**: Support bridging with external platforms (Slack, Discord, Teams, etc.)
+* **Threads**: Create threads for replies and code discussions.
+* **Mentions**: @mention team members and get notified.
+* **Integrations**: Support bridging with additional external platforms.
 * **AI Summaries**: Auto-generated summaries of catch-up conversations.
 
 
 ## **Contributing 🤝**
 
 Contributions are always welcome.
-Fork the repository, open it in VS Code, and use the built-in debugger to test your changes.
+Fork the repository, open it in your favorite IDE, and use the built-in debugger to test your changes.
 
 For significant updates, open an issue first to discuss your approach.

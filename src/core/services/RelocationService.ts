@@ -53,23 +53,27 @@ export class RelocatorEngine {
     }
 
     private tryExactMatch(input: RelocationInput): RelocationResult | null {
-        const relativeStart = input.snapshotStartOffset - input.targetStartOffset;
-        const snapshotLength = input.snapshot.length;
-        if (relativeStart >= 0 && (relativeStart + snapshotLength) <= input.targetCode.length) {
-            const candidate = input.targetCode.substring(relativeStart, relativeStart + snapshotLength + this.LOOKAHEAD_BUFFER);
-            const cleanSnapshot = input.snapshot.replace(/\s+/g, '');
-            const cleanCandidate = candidate.replace(/\s+/g, '');
+        const trimmedSnapshot = input.snapshot.trim();
+        if (!trimmedSnapshot) return null;
 
-            if (cleanCandidate.startsWith(cleanSnapshot)) {
-                return {
-                    success: true,
-                    foundStartOffset: input.snapshotStartOffset,
-                    foundEndOffset: input.snapshotStartOffset + snapshotLength,
-                    confidence: 1.0,
-                    reason: 'exact'
-                };
-            }
+        const expectedLocalStart = Math.max(0, input.snapshotStartOffset - input.targetStartOffset);
+
+        let localIndex = input.targetCode.indexOf(trimmedSnapshot, expectedLocalStart);
+
+        if (localIndex === -1) {
+            localIndex = input.targetCode.lastIndexOf(trimmedSnapshot, expectedLocalStart);
         }
+
+        if (localIndex !== -1) {
+            return {
+                success: true,
+                foundStartOffset: input.targetStartOffset + localIndex,
+                foundEndOffset: input.targetStartOffset + localIndex + trimmedSnapshot.length,
+                confidence: 1.0,
+                reason: 'exact'
+            };
+        }
+
         return null;
     }
 

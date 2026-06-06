@@ -36,6 +36,7 @@ export class ContextLensService {
         allowStale: false
     });
     private relocator = new RelocatorEngine();
+    private snippetSubscription?: { unsubscribe: () => void };
 
     constructor(private codeRepo: ICodeRepository, context: vscode.ExtensionContext) {
         this.buzzDecorationType = vscode.window.createTextEditorDecorationType({
@@ -47,6 +48,9 @@ export class ContextLensService {
         context.subscriptions.push(
             vscode.workspace.onDidChangeTextDocument(e => this.updateLiveRanges(e))
         );
+        if (this._isCLensActive) {
+            this.startSnippetSubscription();
+        }
     }
 
     public toggleCodeLens(value: boolean) {
@@ -55,6 +59,9 @@ export class ContextLensService {
             vscode.window.visibleTextEditors.forEach(editor => {
                 editor.setDecorations(this.buzzDecorationType, []);
             });
+            this.stopSnippetSubscription();
+        } else {
+            this.startSnippetSubscription();
         }
         this._isCLensActive = value;
         Storage.setGlobal("clens.active", value);
@@ -131,6 +138,26 @@ export class ContextLensService {
         editor.setDecorations(this.buzzDecorationType, decorations);
     }
 
+    public getDiffArgs(uriStr: string, discussionId: string): any | undefined {
+        const trackedDiscussions = this.cache.get(uriStr);
+        const td = trackedDiscussions?.find(t => t.discussion.id === discussionId);
+        if (!td) return undefined;
+
+        return {
+            originalContent: td.discussion.content,
+            currentFileUri: uriStr,
+            startLine: td.discussion.start_line,
+            endLine: td.discussion.end_line,
+            liveStartLine: td.liveRange.start.line,
+            liveEndLine: td.liveRange.end.line,
+            ref: td.discussion.ref,
+            commit_sha: td.discussion.commit_sha,
+            patch: td.discussion.patch,
+            filePath: td.discussion.file_path,
+            remoteUrl: td.discussion.remote_url
+        };
+    }
+
     private createMarkdownPopup(discussionList: TrackedDiscussion[], uri: vscode.Uri): vscode.MarkdownString {
         const md = new vscode.MarkdownString('', true);
         md.isTrusted = true;
@@ -151,35 +178,28 @@ export class ContextLensService {
 
             if (d.discussion.content) {
                 const filename = path.basename(uri.fsPath);
-                md.appendMarkdown(`[\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\`](command:clens.highlightCode "Reveal code")`);
-                md.appendMarkdown('\n\n');
+                md.appendMarkdown(`\`@${filename}:L${d.discussion.start_line}-L${d.discussion.end_line}\``);
 
                 if (d.discussion.message.content) {
                     const content = d.discussion.message.content.length > 100
                         ? d.discussion.message.content.substring(0, 100) + '...'
                         : d.discussion.message.content;
-                    md.appendMarkdown(`${content}\n\n`);
+                    md.appendMarkdown(`&nbsp;&nbsp;${content}\n\n`);
                 }
 
 
                 if (d.relocationStatus?.success === false) {
-                    md.appendMarkdown(`⚠️ **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                    md.appendMarkdown(`$(search-stop) **Unable to relocate code.** The snippet may have changed or moved.\n\n`);
+                }
+                else if (d.relocationStatus?.reason !== 'exact') {
+                    md.appendMarkdown(`$(search-fuzzy) **Partial match:** Review the diff to see the changes.\n\n`);
                 }
 
-                const diffArgs = encodeURIComponent(JSON.stringify({
-                    originalContent: d.discussion.content,
-                    currentFileUri: uri.toString(),
-                    startLine: d.discussion.start_line,
-                    endLine: d.discussion.end_line,
-                    liveStartLine: d.liveRange.start.line,
-                    liveEndLine: d.liveRange.end.line,
-                    ref: d.discussion.ref,
-                    commit_sha: d.discussion.commit_sha,
-                    patch: d.discussion.patch,
-                    filePath: d.discussion.file_path,
-                    remoteUrl: d.discussion.remote_url
-                }));
-                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${diffArgs} "View Diff")`);
+                const diffReference = {
+                    filePath: uri.toString(),
+                    discussion_id: d.discussion.id
+                };
+                md.appendMarkdown(`[$(git-compare)](command:clens.showDiff?${encodeURIComponent(JSON.stringify(diffReference))} "View Diff")`);
                 md.appendMarkdown(`&nbsp;&nbsp;|&nbsp;&nbsp;`);
                 md.appendMarkdown(`[$(comment-discussion) Jump to Chat](command:linebuzz.jumpToMessage?${encodeURIComponent(JSON.stringify(d.discussion.message.message_id))} "View Discussion")`);
 
@@ -232,6 +252,34 @@ export class ContextLensService {
             remote_url: chosenRemote.fetchUrl,
         };
     }
+
+    private transformOffset(offset: number, change: vscode.TextDocumentContentChangeEvent, affinity: 'left' | 'right'): number {
+        const changeStart = change.rangeOffset;
+        const changeEnd = changeStart + change.rangeLength;
+        const insertLength = change.text.length;
+        const delta = insertLength - change.rangeLength;
+
+        // Case 1. Edit happens strictly AFTER the offset
+        if (changeStart > offset) {
+            return offset;
+        }
+
+        // Case 2. Edit happens strictly BEFORE the offset (or ends exactly on it)
+        if (changeEnd <= offset) {
+            if (changeStart === offset && change.rangeLength === 0) {
+                return affinity === 'right' ? offset + insertLength : offset;
+            }
+            return offset + delta;
+        }
+
+        // Case 3. Edit OVERLAPS the offset (Destructive edit or Boundary replacement)
+        if (affinity === 'right') {
+            return changeStart + insertLength;
+        } else {
+            return changeStart;
+        }
+    }
+
     private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
         if (event.reason === vscode.TextDocumentChangeReason.Undo ||
             event.reason === vscode.TextDocumentChangeReason.Redo ||
@@ -244,6 +292,7 @@ export class ContextLensService {
 
         const key = event.document.uri.toString();
         const trackedDiscussions = this.cache.get(key);
+        logger.debug('ContextLensService', `Tracked discussions for file ${key}: ${JSON.stringify(trackedDiscussions)}`);
 
         if (!trackedDiscussions || event.contentChanges.length === 0) return;
 
@@ -253,51 +302,19 @@ export class ContextLensService {
         }
 
         const changes = [...event.contentChanges].sort(
-            (a, b) => a.rangeOffset - b.rangeOffset
+            (a, b) => b.rangeOffset - a.rangeOffset
         );
 
+        logger.debug('ContextLensService', `Changes for file ${key}: ${JSON.stringify(changes)}`);
+
         for (const change of changes) {
-            const changeStart = change.rangeOffset;
-            const changeEnd = change.rangeOffset + change.rangeLength;
-            const insertedEnd = changeStart + change.text.length;
-            const delta = change.text.length - change.rangeLength;
-
             for (const td of trackedDiscussions) {
-                // CASE 1:
-                // Change is strictly before the range.
-                if (changeEnd <= td.startOffset) {
-                    td.startOffset += delta;
-                    td.endOffset += delta;
-                }
 
-                // CASE 2:
-                // Change is strictly after the range.
-                else if (changeStart >= td.endOffset) {
-                    // no-op
-                }
+                // 1. Transform Start and End independently using their Affinities
+                td.startOffset = this.transformOffset(td.startOffset, change, 'right');
+                td.endOffset = this.transformOffset(td.endOffset, change, 'left');
 
-                // CASE 3:
-                // Change starts before or at the range and intersects it.
-                // Treat edit as part of the same discussion.
-                else if (changeStart <= td.startOffset && changeEnd > td.startOffset) {
-                    td.startOffset = changeStart;
-                    td.endOffset += delta;
-                }
-
-                // CASE 4:
-                // Change intersects only the end of the range.
-                else if (changeStart < td.endOffset && changeEnd >= td.endOffset) {
-                    td.endOffset = insertedEnd;
-                }
-
-                // CASE 5:
-                // Change lies strictly inside the range.
-                else if (changeStart > td.startOffset && changeEnd < td.endOffset) {
-                    td.endOffset += delta;
-                }
-
-                // CASE 6:
-                // Safety normalization after destructive edits.
+                // 2. Safety normalization (if a deletion inverted the range)
                 if (td.startOffset > td.endOffset) {
                     td.endOffset = td.startOffset;
                 }
@@ -322,12 +339,19 @@ export class ContextLensService {
     private alignDiscussions(document: vscode.TextDocument, discussions: CodeDiscussion[]): TrackedDiscussion[] {
         const fileContent = document.getText();
 
-        const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => ({
-            discussion: d,
-            startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
-            endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0)),
-            liveRange: new vscode.Range(d.start_line - 1, 0, d.end_line - 1, 0)
-        }));
+        const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => {
+            const startLine = document.lineAt(d.start_line - 1);
+            const endLine = document.lineAt(d.end_line - 1);
+            const startChar = startLine.firstNonWhitespaceCharacterIndex;
+            const endChar = endLine.text.trimEnd().length;
+
+            return {
+                discussion: d,
+                startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, startChar)),
+                endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, endChar)),
+                liveRange: new vscode.Range(d.start_line - 1, startChar, d.end_line - 1, endChar)
+            };
+        });
 
         const candidates = trackedDiscussions.filter(td => td.discussion.content);
         if (!candidates.length) return trackedDiscussions;
@@ -337,6 +361,7 @@ export class ContextLensService {
         );
 
         const results = this.relocator.relocate(inputs);
+        logger.debug('ContextLensService', `Relocation results: ${JSON.stringify(results)}`);
 
         results.forEach((result, i) => {
             const td = candidates[i];
@@ -346,12 +371,15 @@ export class ContextLensService {
             };
 
             if (result.success) {
-                td.startOffset = result.foundStartOffset;
-                td.endOffset = result.foundEndOffset;
-                td.liveRange = new vscode.Range(
-                    document.positionAt(result.foundStartOffset),
-                    document.positionAt(result.foundEndOffset)
-                );
+                const startLine = document.lineAt(document.positionAt(result.foundStartOffset));
+                const endLine = document.lineAt(document.positionAt(Math.max(result.foundStartOffset, result.foundEndOffset - 1)));
+                const startChar = startLine.firstNonWhitespaceCharacterIndex;
+                const endChar = endLine.text.trimEnd().length;
+
+                td.startOffset = document.offsetAt(new vscode.Position(startLine.lineNumber, startChar));
+                td.endOffset = document.offsetAt(new vscode.Position(endLine.lineNumber, endChar));
+
+                td.liveRange = new vscode.Range(startLine.lineNumber, startChar, endLine.lineNumber, endChar);
             }
         });
 
@@ -375,8 +403,54 @@ export class ContextLensService {
         };
     }
 
+    private async startSnippetSubscription() {
+        if (this.snippetSubscription) return;
+
+        const teamService = Container.get("TeamService");
+        const authService = Container.get("AuthService");
+        const team = teamService.getTeam();
+        const session = await authService.getSession();
+
+        if (!team || !session) return;
+
+        this.snippetSubscription = await this.codeRepo.subscribeToCodeSnippets(team.id, session.user_id, (discussion) => {
+            this.handleNewSnippet(discussion);
+        });
+    }
+
+    private stopSnippetSubscription() {
+        if (this.snippetSubscription) {
+            this.snippetSubscription.unsubscribe();
+            this.snippetSubscription = undefined;
+        }
+    }
+
+    private handleNewSnippet(discussion: CodeDiscussion) {
+        for (const editor of vscode.window.visibleTextEditors) {
+            const uriStr = editor.document.uri.toString();
+            if (this.cache.has(uriStr)) {
+                this.getFileContext(editor.document).then(context => {
+                    if (context && context.file_path === discussion.file_path && context.remote_url === discussion.remote_url) {
+                        const trackedDiscussions = this.cache.get(uriStr) || [];
+                        if (trackedDiscussions.some(td => td.discussion.id === discussion.id)) {
+                            return;
+                        }
+
+                        const [newTrackedDiscussion] = this.alignDiscussions(editor.document, [discussion]);
+                        if (newTrackedDiscussion) {
+                            trackedDiscussions.push(newTrackedDiscussion);
+                            this.cache.set(uriStr, trackedDiscussions);
+                            vscode.commands.executeCommand('linebuzz.refreshCLens');
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     public dispose() {
         this.cache.clear();
         this.buzzDecorationType.dispose();
+        this.stopSnippetSubscription();
     }
 }

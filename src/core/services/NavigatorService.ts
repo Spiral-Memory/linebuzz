@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
+import * as fs from 'fs';
 import { Snippet } from "../../types/IAttachment";
 import { logger } from '../utils/logger';
 import { RelocatorEngine } from "./RelocationService";
 import { findRepositoryByRemote, resolveFilePath } from "../utils/gitFileMapper";
 
-export class NavigatorService {
+export class NavigatorService implements vscode.UriHandler {
 
     private snippetDecoration = vscode.window.createTextEditorDecorationType({
         backgroundColor: new vscode.ThemeColor('editor.wordHighlightStrongBackground'),
@@ -126,6 +127,105 @@ export class NavigatorService {
         }
         return { success: false, reason: 'file_not_found' };
     }
+
+    public async openFileByPath(filePath: string, startLine?: number, endLine?: number, remoteUrl?: string): Promise<boolean> {
+        let fileUri: vscode.Uri | undefined;
+
+        if (remoteUrl) {
+            const gitExtension = vscode.extensions.getExtension('vscode.git');
+            if (gitExtension) {
+                if (!gitExtension.isActive) {
+                    try {
+                        await gitExtension.activate();
+                    } catch (e) {
+                        logger.error('NavigatorService', 'Failed to activate git extension', e);
+                    }
+                }
+                try {
+                    const api = gitExtension.exports.getAPI(1);
+                    const matchingRepo = findRepositoryByRemote(api, remoteUrl);
+                    if (matchingRepo) {
+                        fileUri = resolveFilePath(matchingRepo, filePath);
+                    }
+                } catch (e) {
+                    logger.error('NavigatorService', 'Error mapping repository', e);
+                }
+            }
+        }
+
+        if (!fileUri) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                for (const folder of workspaceFolders) {
+                    const candidateUri = vscode.Uri.joinPath(folder.uri, filePath);
+                    if (fs.existsSync(candidateUri.fsPath)) {
+                        fileUri = candidateUri;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!fileUri) {
+            vscode.window.showWarningMessage(`File not found in workspace: ${filePath}. Please make sure you have opened the correct project/workspace.`);
+            return false;
+        }
+
+        try {
+            const doc = await vscode.workspace.openTextDocument(fileUri);
+            const editor = await vscode.window.showTextDocument(doc);
+
+            if (startLine !== undefined) {
+                const lineIdx = Math.max(0, startLine - 1);
+                const safeLineIdx = Math.min(lineIdx, doc.lineCount - 1);
+                const safeEndLineIdx = endLine !== undefined ? Math.min(Math.max(0, endLine - 1), doc.lineCount - 1) : safeLineIdx;
+
+                const textLine = doc.lineAt(safeLineIdx);
+                const pos = new vscode.Position(safeLineIdx, textLine.firstNonWhitespaceCharacterIndex);
+                editor.selection = new vscode.Selection(pos, pos);
+
+                const range = new vscode.Range(
+                    new vscode.Position(safeLineIdx, 0),
+                    new vscode.Position(safeEndLineIdx, doc.lineAt(safeEndLineIdx).text.length)
+                );
+
+                editor.revealRange(
+                    range,
+                    vscode.TextEditorRevealType.InCenter
+                );
+
+                editor.setDecorations(this.snippetDecoration, [range]);
+                setTimeout(() => {
+                    editor.setDecorations(this.snippetDecoration, []);
+                }, 1500);
+            }
+            logger.info('NavigatorService', `Successfully opened file by path: ${filePath}`);
+            return true;
+        } catch (e) {
+            logger.warn('NavigatorService', `Failed to open file path: ${filePath}`, e);
+            return false;
+        }
+    }
+
+    public async handleUri(uri: vscode.Uri) {
+        logger.info("NavigatorService", `Received protocol link: ${uri.toString()}`);
+        if (uri.path === '/open') {
+            const params = new URLSearchParams(uri.query);
+            const filePath = params.get('filePath');
+            const startLine = params.get('startLine') ? parseInt(params.get('startLine')!, 10) : undefined;
+            const endLine = params.get('endLine') ? parseInt(params.get('endLine')!, 10) : undefined;
+            const remoteUrl = params.get('remoteUrl') || params.get('remote_url') || undefined;
+
+            if (filePath) {
+                const opened = await this.openFileByPath(filePath, startLine, endLine, remoteUrl);
+                if (!opened) {
+                    await vscode.commands.executeCommand('workbench.view.extension.linebuzz-view-container');
+                    await vscode.commands.executeCommand('linebuzz.chatpanel.focus');
+                }
+            }
+        }
+    }
+
     public dispose() {
         this.snippetDecoration.dispose();
     }

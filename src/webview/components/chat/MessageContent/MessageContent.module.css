@@ -107,3 +107,13 @@
 .message-content.is-me :global(.code-block-wrapper) {
     text-align: left;
 }
+
+:global(.mention) {
+    color: var(--vscode-textLink-foreground);
+    font-weight: normal;
+}
+
+:global(.channel) {
+    color: var(--vscode-textLink-foreground);
+    font-weight: normal;
+}
