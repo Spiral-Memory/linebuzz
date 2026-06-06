@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { BaseWebviewProvider } from './BaseWebviewProvider';
 import { Container } from '../services/ServiceContainer';
 import { MessageResponse } from '../../types/IMessage';
+import { Storage } from '../platform/storage';
+import { SupabaseClient } from '../../adapters/supabase/SupabaseClient';
 
 export class ChatPanelProvider extends BaseWebviewProvider {
     public static readonly viewId = 'linebuzz.chatpanel';
@@ -59,6 +61,65 @@ export class ChatPanelProvider extends BaseWebviewProvider {
 
     protected async _onDidReceiveMessage(data: any): Promise<void> {
         switch (data.command) {
+            case 'signInCustom': {
+                const { url, anonKey } = data;
+                try {
+                    if (!url || !anonKey) {
+                        this._view?.webview.postMessage({
+                            command: 'signInCustomResult',
+                            success: false,
+                            error: 'URL and Key are required.'
+                        });
+                        break;
+                    }
+                    let formattedUrl = url.trim();
+                    if (!/^https?:\/\//i.test(formattedUrl)) {
+                        formattedUrl = 'https://' + formattedUrl;
+                    }
+                    formattedUrl = formattedUrl.replace(/\/$/, "");
+
+                    const testUrl = `${formattedUrl}/rest/v1/team_integrations?select=settings&limit=1`;
+                    const res = await fetch(testUrl, {
+                        method: 'GET',
+                        headers: {
+                            'apikey': anonKey,
+                            'Authorization': `Bearer ${anonKey}`
+                        }
+                    });
+
+                    if (res.status !== 401 && res.status !== 403 && res.status !== 400) {
+                        Storage.setGlobal('custom_supabase_url', formattedUrl);
+                        Storage.setGlobal('custom_supabase_anon_key', anonKey);
+                        SupabaseClient.resetInstance();
+                        this._view?.webview.postMessage({
+                            command: 'signInCustomResult',
+                            success: true
+                        });
+                        await this.updateIdentity();
+                    } else {
+                        this._view?.webview.postMessage({
+                            command: 'signInCustomResult',
+                            success: false
+                        });
+                    }
+                } catch (error: any) {
+                    console.error('Error during custom server health check:', error);
+                    this._view?.webview.postMessage({
+                        command: 'signInCustomResult',
+                        success: false
+                    });
+                }
+                break;
+            }
+            case 'resetDefaultServer': {
+                Storage.deleteGlobal('custom_supabase_url');
+                Storage.deleteGlobal('custom_supabase_anon_key');
+                SupabaseClient.resetInstance();
+                const authService = Container.get('AuthService');
+                await authService.initializeSession(false);
+                await this.updateIdentity();
+                break;
+            }
             case 'getWebviewState':
                 await this.updateIdentity();
                 await this.updateSnippet();
@@ -298,7 +359,8 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 isLoggedIn: !!session,
                 hasTeam: !!team,
                 isSlackConnected: this.teamService.isSlackConnected(),
-                slackChannel: this.teamService.getSlackActiveChannelName()
+                slackChannel: this.teamService.getSlackActiveChannelName(),
+                customServerUrl: Storage.getGlobal<string>("custom_supabase_url") || null
             }
         });
     }

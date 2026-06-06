@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient as SupabaseJsClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../core/platform/config";
 import { VSCodeSupabaseStorage } from "./VSCodeSupabaseStorage";
+import { Storage } from "../../core/platform/storage";
 
 export class SupabaseClient {
   private static instance: SupabaseClient;
@@ -8,7 +9,9 @@ export class SupabaseClient {
   private lastSyncedToken: string | null = null;
 
   private constructor() {
-    this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const url = Storage.getGlobal<string>("custom_supabase_url") || SUPABASE_URL;
+    const anonKey = Storage.getGlobal<string>("custom_supabase_anon_key") || SUPABASE_ANON_KEY;
+    this.client = createClient(url, anonKey, {
       auth: {
         storage: new VSCodeSupabaseStorage(),
         autoRefreshToken: true,
@@ -23,6 +26,10 @@ export class SupabaseClient {
       SupabaseClient.instance = new SupabaseClient();
     }
     return SupabaseClient.instance;
+  }
+
+  public static resetInstance(): void {
+    SupabaseClient.instance = undefined as any;
   }
 
   public async syncRealtimeAuth(): Promise<void> {
