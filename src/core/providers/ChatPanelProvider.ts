@@ -79,7 +79,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                     }
                     formattedUrl = formattedUrl.replace(/\/$/, "");
 
-                    const testUrl = `${formattedUrl}/rest/v1/team_integrations?select=settings&limit=1`;
+                    const testUrl = `${formattedUrl}/rest/v1/teams?limit=1`;
                     const res = await fetch(testUrl, {
                         method: 'GET',
                         headers: {
@@ -88,7 +88,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                         }
                     });
 
-                    if (res.status !== 401 && res.status !== 403 && res.status !== 400) {
+                    if (res.status == 200) {
                         Storage.setGlobal('custom_supabase_url', formattedUrl);
                         Storage.setGlobal('custom_supabase_anon_key', anonKey);
                         SupabaseClient.resetInstance();
