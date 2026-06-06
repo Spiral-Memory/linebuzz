@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/Spiral-Memory/LineBuzz.git"
   },
-  "version": "0.3.0-rc.2",
+  "version": "0.3.0",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -77,6 +77,11 @@
         "title": "Copy Team Invite Code",
         "category": "LineBuzz",
         "icon": "$(key)"
+      },
+      {
+        "command": "linebuzz.logout",
+        "title": "Sign Out",
+        "category": "LineBuzz"
       }
     ],
     "keybindings": [
@@ -108,6 +113,10 @@
         {
           "command": "linebuzz.copyInviteCode",
           "when": "extension.isLoggedIn && linebuzz.hasTeam && linebuzz.isAdmin"
+        },
+        {
+          "command": "linebuzz.logout",
+          "when": "extension.isLoggedIn"
         }
       ],
       "editor/context": [
@@ -202,6 +211,7 @@
     "@supabase/supabase-js": "^2.54.0",
     "@types/dompurify": "^3.0.5",
     "@types/marked": "^5.0.2",
+    "compare-versions": "^6.1.1",
     "date-fns": "^4.1.0",
     "dedent": "^1.7.1",
     "dompurify": "^3.3.1",

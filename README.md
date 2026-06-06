@@ -42,7 +42,7 @@ Create a `.env` file in the project root, based on `.env.example`, and populate 
 
 ```env
 SUPABASE_URL=<your-supabase-url>
-SUPABASE_ANON_KEY=<your-supabase-anon-key>
+SUPABASE_PUBLISHABLE_KEY=<your-supabase-publishable-key>
 ```
 These values connect LineBuzz to your project’s backend for authentication and data sync.
 Press **F5** to launch the extension in a new VS Code window (Extension Development Host).

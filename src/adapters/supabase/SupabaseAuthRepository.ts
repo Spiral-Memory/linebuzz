@@ -1,6 +1,7 @@
 import { IAuthRepository, AuthSession } from "../interfaces/IAuthRepository";
 import { SupabaseClient } from "./SupabaseClient";
 import { logger } from "../../core/utils/logger";
+import { Storage } from "../../core/platform/storage";
 
 export class SupabaseAuthRepository implements IAuthRepository {
 
@@ -54,11 +55,14 @@ export class SupabaseAuthRepository implements IAuthRepository {
     const supabase = SupabaseClient.getInstance().client;
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      await supabase.auth.signOut();
-      logger.info("SupabaseAuthRepository", "Signed out successfully.");
-    } else {
-      logger.info("SupabaseAuthRepository", "No active session found to sign out.");
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        logger.warn("SupabaseAuthRepository", "Remote signout failed:", err);
+      }
     }
+    await Storage.deleteSecret("linebuzz-auth-token");
+    SupabaseClient.resetInstance();
   }
 
   private extractSessionData(session: any): AuthSession {

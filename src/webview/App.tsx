@@ -15,6 +15,7 @@ interface AppState {
   stagedSnippet?: Snippet[] | [];
   isSlackConnected?: boolean;
   slackChannel?: string | null;
+  customServerUrl?: string | null;
 }
 
 export function App() {
@@ -38,6 +39,7 @@ export function App() {
             hasTeam: message.state.hasTeam,
             isSlackConnected: message.state.isSlackConnected,
             slackChannel: message.state.slackChannel,
+            customServerUrl: message.state.customServerUrl,
             isLoading: false
           }));
           break;
@@ -84,7 +86,13 @@ export function App() {
   }
 
   if (!state.isLoggedIn || !state.hasTeam) {
-    return <ConnectView isLoggedIn={state.isLoggedIn} hasTeam={state.hasTeam} />;
+    return (
+      <ConnectView
+        isLoggedIn={state.isLoggedIn}
+        hasTeam={state.hasTeam}
+        customServerUrl={state.customServerUrl}
+      />
+    );
   }
 
   return (

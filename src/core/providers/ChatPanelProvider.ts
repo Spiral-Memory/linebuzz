@@ -2,6 +2,10 @@ import * as vscode from 'vscode';
 import { BaseWebviewProvider } from './BaseWebviewProvider';
 import { Container } from '../services/ServiceContainer';
 import { MessageResponse } from '../../types/IMessage';
+import { Storage } from '../platform/storage';
+import { SupabaseClient } from '../../adapters/supabase/SupabaseClient';
+import { loginCommand } from '../commands/AuthCommand';
+import { logger } from "../utils/logger";
 
 export class ChatPanelProvider extends BaseWebviewProvider {
     public static readonly viewId = 'linebuzz.chatpanel';
@@ -59,6 +63,58 @@ export class ChatPanelProvider extends BaseWebviewProvider {
 
     protected async _onDidReceiveMessage(data: any): Promise<void> {
         switch (data.command) {
+            case 'signInCustom': {
+                const { url, publishableKey } = data;
+                try {
+                    if (!url || !publishableKey) {
+                        this._view?.webview.postMessage({
+                            command: 'signInCustomResult',
+                            success: false,
+                            error: 'URL and Key are required.'
+                        });
+                        break;
+                    }
+                    let formattedUrl = url.trim();
+                    if (!/^https?:\/\//i.test(formattedUrl)) {
+                        formattedUrl = 'https://' + formattedUrl;
+                    }
+                    formattedUrl = formattedUrl.replace(/\/$/, "");
+
+                    const versionResult = await this.authService.checkVersionCompatibility(formattedUrl, publishableKey, true);
+                    if (versionResult.compatible) {
+                        Storage.setGlobal('custom_supabase_url', formattedUrl);
+                        Storage.setGlobal('custom_supabase_publishable_key', publishableKey);
+                        SupabaseClient.resetInstance();
+                        this._view?.webview.postMessage({
+                            command: 'signInCustomResult',
+                            success: true
+                        });
+                        await this.updateIdentity();
+                    } else {
+                        this._view?.webview.postMessage({
+                            command: 'signInCustomResult',
+                            success: false,
+                            error: versionResult.error || 'Connection failed.'
+                        });
+                    }
+                } catch (error: any) {
+                    logger.error("ChatPanelProvider", "Error during custom server health check:", error);
+                    this._view?.webview.postMessage({
+                        command: 'signInCustomResult',
+                        success: false,
+                        error: 'Failed to connect to host. Please verify the URL and keys.'
+                    });
+                }
+                break;
+            }
+            case 'resetDefaultServer': {
+                Storage.deleteGlobal('custom_supabase_url');
+                Storage.deleteGlobal('custom_supabase_publishable_key');
+                SupabaseClient.resetInstance();
+                await loginCommand({ createIfNone: false });
+                await this.updateIdentity();
+                break;
+            }
             case 'getWebviewState':
                 await this.updateIdentity();
                 await this.updateSnippet();
@@ -298,7 +354,8 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                 isLoggedIn: !!session,
                 hasTeam: !!team,
                 isSlackConnected: this.teamService.isSlackConnected(),
-                slackChannel: this.teamService.getSlackActiveChannelName()
+                slackChannel: this.teamService.getSlackActiveChannelName(),
+                customServerUrl: Storage.getGlobal<string>("custom_supabase_url") || null
             }
         });
     }

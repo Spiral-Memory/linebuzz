@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient as SupabaseJsClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../core/platform/config";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../../core/platform/config";
 import { VSCodeSupabaseStorage } from "./VSCodeSupabaseStorage";
+import { Storage } from "../../core/platform/storage";
 
 export class SupabaseClient {
   private static instance: SupabaseClient;
@@ -8,12 +9,15 @@ export class SupabaseClient {
   private lastSyncedToken: string | null = null;
 
   private constructor() {
-    this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const url = Storage.getGlobal<string>("custom_supabase_url") || SUPABASE_URL;
+    const publishableKey = Storage.getGlobal<string>("custom_supabase_publishable_key") || SUPABASE_PUBLISHABLE_KEY;
+    this.client = createClient(url, publishableKey, {
       auth: {
         storage: new VSCodeSupabaseStorage(),
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        storageKey: 'linebuzz-auth-token',
       },
     });
   }
@@ -23,6 +27,10 @@ export class SupabaseClient {
       SupabaseClient.instance = new SupabaseClient();
     }
     return SupabaseClient.instance;
+  }
+
+  public static resetInstance(): void {
+    SupabaseClient.instance = undefined as any;
   }
 
   public async syncRealtimeAuth(): Promise<void> {
