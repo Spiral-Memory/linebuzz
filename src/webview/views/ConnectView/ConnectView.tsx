@@ -31,7 +31,7 @@ export const ConnectView = ({ isLoggedIn, hasTeam, customServerUrl }: ConnectVie
                     setShowForm(false);
                     setError(null);
                 } else {
-                    setError('Connection failed. Invalid host or publishable key.');
+                    setError(message.error || 'Connection failed. Invalid host or publishable key.');
                 }
             }
         };
@@ -57,7 +57,7 @@ export const ConnectView = ({ isLoggedIn, hasTeam, customServerUrl }: ConnectVie
         vscode.postMessage({
             command: 'signInCustom',
             url: host.trim(),
-            anonKey: key.trim()
+            publishableKey: key.trim()
         });
     };
 

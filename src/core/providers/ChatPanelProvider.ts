@@ -5,6 +5,7 @@ import { MessageResponse } from '../../types/IMessage';
 import { Storage } from '../platform/storage';
 import { SupabaseClient } from '../../adapters/supabase/SupabaseClient';
 import { loginCommand } from '../commands/AuthCommand';
+import { logger } from "../utils/logger";
 
 export class ChatPanelProvider extends BaseWebviewProvider {
     public static readonly viewId = 'linebuzz.chatpanel';
@@ -63,9 +64,9 @@ export class ChatPanelProvider extends BaseWebviewProvider {
     protected async _onDidReceiveMessage(data: any): Promise<void> {
         switch (data.command) {
             case 'signInCustom': {
-                const { url, anonKey } = data;
+                const { url, publishableKey } = data;
                 try {
-                    if (!url || !anonKey) {
+                    if (!url || !publishableKey) {
                         this._view?.webview.postMessage({
                             command: 'signInCustomResult',
                             success: false,
@@ -79,18 +80,10 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                     }
                     formattedUrl = formattedUrl.replace(/\/$/, "");
 
-                    const testUrl = `${formattedUrl}/rest/v1/teams?limit=1`;
-                    const res = await fetch(testUrl, {
-                        method: 'GET',
-                        headers: {
-                            'apikey': anonKey,
-                            'Authorization': `Bearer ${anonKey}`
-                        }
-                    });
-
-                    if (res.status == 200) {
+                    const versionResult = await this.authService.checkVersionCompatibility(formattedUrl, publishableKey, true);
+                    if (versionResult.compatible) {
                         Storage.setGlobal('custom_supabase_url', formattedUrl);
-                        Storage.setGlobal('custom_supabase_anon_key', anonKey);
+                        Storage.setGlobal('custom_supabase_publishable_key', publishableKey);
                         SupabaseClient.resetInstance();
                         this._view?.webview.postMessage({
                             command: 'signInCustomResult',
@@ -100,21 +93,23 @@ export class ChatPanelProvider extends BaseWebviewProvider {
                     } else {
                         this._view?.webview.postMessage({
                             command: 'signInCustomResult',
-                            success: false
+                            success: false,
+                            error: versionResult.error || 'Connection failed.'
                         });
                     }
                 } catch (error: any) {
-                    console.error('Error during custom server health check:', error);
+                    logger.error("ChatPanelProvider", "Error during custom server health check:", error);
                     this._view?.webview.postMessage({
                         command: 'signInCustomResult',
-                        success: false
+                        success: false,
+                        error: 'Failed to connect to host. Please verify the URL and keys.'
                     });
                 }
                 break;
             }
             case 'resetDefaultServer': {
                 Storage.deleteGlobal('custom_supabase_url');
-                Storage.deleteGlobal('custom_supabase_anon_key');
+                Storage.deleteGlobal('custom_supabase_publishable_key');
                 SupabaseClient.resetInstance();
                 await loginCommand({ createIfNone: false });
                 await this.updateIdentity();

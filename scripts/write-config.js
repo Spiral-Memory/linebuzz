@@ -4,11 +4,11 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const vars = {
   SUPABASE_URL: process.env.SUPABASE_URL || '',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
+  SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '',
 };
 
-if (!vars.SUPABASE_URL || !vars.SUPABASE_ANON_KEY) {
-  console.error(' Missing required env vars. Make sure .env contains SUPABASE_URL and SUPABASE_ANON_KEY');
+if (!vars.SUPABASE_URL || !vars.SUPABASE_PUBLISHABLE_KEY) {
+  console.error(' Missing required env vars. Make sure .env contains SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY');
   process.exit(1);
 }
 
@@ -16,7 +16,7 @@ const content = `// Auto-generated from .env
 // Do not edit manually. Run "npm run config" to regenerate.
 
 export const SUPABASE_URL = "${vars.SUPABASE_URL}";
-export const SUPABASE_ANON_KEY = "${vars.SUPABASE_ANON_KEY}";
+export const SUPABASE_PUBLISHABLE_KEY = "${vars.SUPABASE_PUBLISHABLE_KEY}";
 `;
 
 const targetDir = path.join(__dirname, '..', 'src', 'core', 'platform');

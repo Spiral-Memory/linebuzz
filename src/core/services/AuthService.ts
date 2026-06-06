@@ -4,6 +4,13 @@ import { Container } from "./ServiceContainer";
 import { IAuthRepository, AuthSession } from '../../adapters/interfaces/IAuthRepository';
 import { logger } from "../utils/logger";
 import { Storage } from "../platform/storage";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../platform/config";
+import { isVersionGte } from "../utils/version";
+
+export interface VersionCheckResult {
+    compatible: boolean;
+    error?: string;
+}
 
 export class AuthService {
 
@@ -11,6 +18,49 @@ export class AuthService {
     public readonly onDidChangeSession = this._onDidChangeSession.event;
 
     constructor(private authRepo: IAuthRepository) { }
+
+    public async checkVersionCompatibility(url: string, publishableKey: string, isCustom?: boolean): Promise<VersionCheckResult> {
+        try {
+            const res = await fetch(`${url}/rest/v1/app_metadata?limit=1`, {
+                method: "GET",
+                headers: {
+                    "apikey": publishableKey,
+                    "Authorization": `Bearer ${publishableKey}`
+                }
+            });
+            if (res.status !== 200) {
+                return {
+                    compatible: false,
+                    error: isCustom
+                        ? "Couldn't connect to a compatible LineBuzz server. Please verify the URL and publishable key."
+                        : "Couldn't connect to a compatible LineBuzz server."
+                };
+            }
+
+            const json = await res.json();
+            const minVersion = json?.[0]?.min_client_version;
+            if (!minVersion) {
+                return { compatible: false, error: "Failed to retrieve version requirement from server." };
+            }
+
+            const currentVersion = vscode.extensions.getExtension("SpiralMemory.linebuzz")?.packageJSON.version || "0.0.0";
+            if (!isVersionGte(currentVersion, minVersion)) {
+                return {
+                    compatible: false,
+                    error: `Your LineBuzz extension is outdated (v${currentVersion}). Minimum required version is v${minVersion}. Please upgrade.`
+                };
+            }
+            return { compatible: true };
+        } catch (error) {
+            logger.error("AuthService", "Version check failed:", error);
+            return {
+                compatible: false,
+                error: isCustom
+                    ? "Failed to connect to host. Please verify the URL and publishable key."
+                    : "Failed to connect to host."
+            };
+        }
+    }
 
     public async getSession(): Promise<AuthSession | null> {
         try {
@@ -37,11 +87,23 @@ export class AuthService {
         try {
             const session = await Promise.race([
                 this.authRepo.exchangeTokenForSession(githubSession.accessToken),
-                new Promise<AuthSession>((_, reject) => 
+                new Promise<AuthSession>((_, reject) =>
                     setTimeout(() => reject(new Error("Connection timed out. Please check if host server is running.")), 15000)
                 )
             ]);
             logger.info("AuthService", "Secure session established with backend.");
+
+            const url = Storage.getGlobal<string>("custom_supabase_url") || SUPABASE_URL;
+            const publishableKey = Storage.getGlobal<string>("custom_supabase_publishable_key") || SUPABASE_PUBLISHABLE_KEY;
+            const versionResult = await this.checkVersionCompatibility(url, publishableKey);
+            if (!versionResult.compatible) {
+                if (showNotification && versionResult.error) {
+                    vscode.window.showErrorMessage(versionResult.error);
+                }
+                await this.signOut();
+                return null;
+            }
+
             if (showNotification) {
                 vscode.window.showInformationMessage(`Logged in as ${session.username}`);
             }
