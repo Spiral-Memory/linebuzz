@@ -8,8 +8,8 @@ export class SupabaseTeamRepository implements ITeamRepository {
     private _onSlackConnectedEvent = new vscode.EventEmitter<boolean>();
     public readonly onSlackConnectedEvent = this._onSlackConnectedEvent.event;
 
-    public onSlackConnected(callback: (isConnected: boolean) => void): void {
-        this._onSlackConnectedEvent.event(callback);
+    public onSlackConnected(callback: (isConnected: boolean) => void): { dispose(): void } {
+        return this._onSlackConnectedEvent.event(callback);
     }
 
     async createTeam(name: string): Promise<TeamInfo> {

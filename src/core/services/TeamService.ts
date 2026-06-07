@@ -7,6 +7,7 @@ import { SlackService } from "./SlackService";
 export class TeamService {
     private currentTeam: TeamInfo | undefined;
     private integrationSubscription: { unsubscribe: () => void } | undefined;
+    private slackConnectionSubscription: { dispose(): void } | undefined;
     private slackService: SlackService;
     private slackConnected: boolean = false;
     private slackChannel: string | null = null;
@@ -80,13 +81,18 @@ export class TeamService {
         this.slackConnected = false;
         this.slackChannel = null;
         this._onDidChangeSlackIntegration.fire(false);
-        
+
         if (this.integrationSubscription) {
             this.integrationSubscription.unsubscribe();
             this.integrationSubscription = undefined;
             logger.info("TeamService", "Unsubscribed from integration changes");
         }
-        
+
+        if (this.slackConnectionSubscription) {
+            this.slackConnectionSubscription.dispose();
+            this.slackConnectionSubscription = undefined;
+        }
+
         this._onDidChangeTeam.fire(undefined);
         Storage.deleteGlobal("currentTeam");
         await Storage.deleteSecret("teamInviteCode");
@@ -98,7 +104,7 @@ export class TeamService {
 
     private async setTeam(team: TeamInfo) {
         this.currentTeam = team;
-        Storage.setGlobal("currentTeam", team);        
+        Storage.setGlobal("currentTeam", team);
         if (team.invite_code) {
             await Storage.setSecret('teamInviteCode', team.invite_code);
         }
@@ -114,15 +120,19 @@ export class TeamService {
             this.slackConnected = false;
             this.slackChannel = null;
         }
-        
+
         try {
             if (this.integrationSubscription) {
                 this.integrationSubscription.unsubscribe();
             }
             this.integrationSubscription = await this.slackService.listenForSlackIntegration(team.id);
-            
+
+            if (this.slackConnectionSubscription) {
+                this.slackConnectionSubscription.dispose();
+            }
+
             if (this.teamRepo.onSlackConnected) {
-                this.teamRepo.onSlackConnected(async (isConnected: boolean) => {
+                this.slackConnectionSubscription = this.teamRepo.onSlackConnected(async (isConnected: boolean) => {
                     const wasConnected = this.slackConnected;
                     const prevChannel = this.slackChannel;
 
@@ -150,12 +160,12 @@ export class TeamService {
                     }
                 });
             }
-            
+
             logger.info("TeamService", `Started listening for Slack integration changes for team: ${team.id}`);
         } catch (error) {
             logger.error("TeamService", "Failed to subscribe to integration changes", error);
         }
-        
+
         await this.updateContext(true, team);
         this._onDidChangeTeam.fire(team);
     }
