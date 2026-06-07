@@ -217,13 +217,18 @@ export class SupabaseTeamRepository implements ITeamRepository {
     public async updateActiveChannel(teamId: string, channelId: string): Promise<void> {
         try {
             const supabase = SupabaseClient.getInstance().client;
-            const { error } = await supabase.rpc('set_slack_channel', {
+            const { data, error } = await supabase.rpc('set_slack_channel', {
                 p_team_id: teamId,
                 p_channel_id: channelId
             });
 
             if (error) {
                 throw new Error(`Failed to update active channel: ${error.message}`);
+            }
+
+            const response = data as any;
+            if (response && response.status === 'error') {
+                throw new Error(response.message || 'Failed to update active channel');
             }
 
             logger.info("SupabaseTeamRepository", `Active channel updated to ${channelId} for team ${teamId}`);
