@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Container } from "../services/ServiceContainer";
 import { SlackService } from "../services/SlackService";
+import { logger } from "../utils/logger";
 
 export async function syncSlackCommand() {
     const teamService = Container.get("TeamService");
@@ -37,7 +38,9 @@ export async function syncSlackCommand() {
         }
 
     } catch (error: any) {
-        const errorMessage = error.message || "Failed to connect Slack";
-        vscode.window.showErrorMessage(`Slack connection failed: ${errorMessage}`);
+        logger.error("SlackCommand", "Slack connection failed", error);
+        vscode.window.showErrorMessage(
+            "Slack connection failed. Please contact your host administrator to verify the configuration."
+        );
     }
 }
