@@ -47,6 +47,9 @@ export class ChatPanelProvider extends BaseWebviewProvider {
         }).then(sub => typingSub = sub);
 
         webviewView.onDidDispose(() => {
+            if (this._view === webviewView) {
+                this._view = undefined;
+            }
             if (this._subscription) {
                 this._subscription.unsubscribe();
                 this._subscription = undefined;
@@ -309,7 +312,7 @@ export class ChatPanelProvider extends BaseWebviewProvider {
     }
 
     public async jumpToMessage(messageId: string) {
-        if (!this._view) {
+        if (!this._view || !this._view.visible) {
             await vscode.commands.executeCommand('linebuzz.chatpanel.focus');
         }
 

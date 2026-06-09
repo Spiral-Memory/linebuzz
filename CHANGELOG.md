@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-06-10
+
+### Fixed
+- Fixed line out-of-bounds error on shortened files.
+- Fixed jump to chat button not focusing the closed chat panel.
+- Added disposal of Slack connection listener on webview close.
+
 ## [0.3.1] - 2026-06-07
 
 ### Fixed

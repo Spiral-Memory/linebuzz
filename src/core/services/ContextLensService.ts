@@ -340,16 +340,18 @@ export class ContextLensService {
         const fileContent = document.getText();
 
         const trackedDiscussions: TrackedDiscussion[] = discussions.map(d => {
-            const startLine = document.lineAt(d.start_line - 1);
-            const endLine = document.lineAt(d.end_line - 1);
+            const startLineNum = Math.max(1, Math.min(d.start_line, document.lineCount));
+            const endLineNum = Math.max(1, Math.min(d.end_line, document.lineCount));
+            const startLine = document.lineAt(startLineNum - 1);
+            const endLine = document.lineAt(endLineNum - 1);
             const startChar = startLine.firstNonWhitespaceCharacterIndex;
             const endChar = endLine.text.trimEnd().length;
 
             return {
                 discussion: d,
-                startOffset: document.offsetAt(new vscode.Position(d.start_line - 1, startChar)),
-                endOffset: document.offsetAt(new vscode.Position(d.end_line - 1, endChar)),
-                liveRange: new vscode.Range(d.start_line - 1, startChar, d.end_line - 1, endChar)
+                startOffset: document.offsetAt(new vscode.Position(startLineNum - 1, startChar)),
+                endOffset: document.offsetAt(new vscode.Position(endLineNum - 1, endChar)),
+                liveRange: new vscode.Range(startLineNum - 1, startChar, endLineNum - 1, endChar)
             };
         });
 
@@ -387,8 +389,11 @@ export class ContextLensService {
     }
 
     private createRelocationInput(d: CodeDiscussion, document: vscode.TextDocument, fileContent: string): RelocationInput {
-        const searchStartLine = Math.max(0, d.start_line - 1 - 500);
-        const searchEndLine = Math.min(document.lineCount - 1, d.end_line - 1 + 500);
+        const startLineNum = Math.max(1, Math.min(d.start_line, document.lineCount));
+        const endLineNum = Math.max(1, Math.min(d.end_line, document.lineCount));
+
+        const searchStartLine = Math.max(0, startLineNum - 1 - 500);
+        const searchEndLine = Math.min(document.lineCount - 1, endLineNum - 1 + 500);
 
         const windowStartOffset = document.offsetAt(new vscode.Position(searchStartLine, 0));
         const windowEndOffset = document.offsetAt(document.lineAt(searchEndLine).range.end);
@@ -398,8 +403,8 @@ export class ContextLensService {
             targetCode: fileContent.substring(windowStartOffset, windowEndOffset),
             targetStartOffset: windowStartOffset,
             targetEndOffset: windowEndOffset,
-            snapshotStartOffset: document.offsetAt(new vscode.Position(d.start_line - 1, 0)),
-            snapshotEndOffset: document.offsetAt(new vscode.Position(d.end_line - 1, 0))
+            snapshotStartOffset: document.offsetAt(new vscode.Position(startLineNum - 1, 0)),
+            snapshotEndOffset: document.offsetAt(new vscode.Position(endLineNum - 1, 0))
         };
     }
 
