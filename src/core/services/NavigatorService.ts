@@ -46,10 +46,13 @@ export class NavigatorService implements vscode.UriHandler {
                 // TODO: Search all files in repo, this maybe a casing mismatch
                 return { success: false, reason: 'file_not_found' };
             }
-
+            
             const editor = await vscode.window.showTextDocument(targetUri);
-            let startLine = snippet.start_line - 1;
-            let endLine = snippet.end_line - 1;
+            const doc = editor.document;
+            const startLineNum = Math.max(1, Math.min(snippet.start_line, doc.lineCount));
+            const endLineNum = Math.max(1, Math.min(snippet.end_line, doc.lineCount));
+            let startLine = startLineNum - 1;
+            let endLine = endLineNum - 1;
             let matchReason: 'exact' | 'geometric' | 'orphaned' | 'empty' | 'error' = 'error';
             let diffArgs: any | undefined;
 

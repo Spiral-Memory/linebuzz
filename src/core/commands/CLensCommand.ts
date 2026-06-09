@@ -28,8 +28,9 @@ export const deactivateCLensCommand = async (codeLensProvider: CodeLensProvider)
 export const openPeekCommand = async (uri: vscode.Uri, line: number) => {
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.uri.toString() === uri.toString()) {
-        const textLine = editor.document.lineAt(line);
-        const pos = new vscode.Position(line, textLine.firstNonWhitespaceCharacterIndex);
+        const safeLine = Math.max(0, Math.min(line, editor.document.lineCount - 1));
+        const textLine = editor.document.lineAt(safeLine);
+        const pos = new vscode.Position(safeLine, textLine.firstNonWhitespaceCharacterIndex);
         editor.selection = new vscode.Selection(pos, pos);
         await vscode.commands.executeCommand("editor.action.showHover");
     }
