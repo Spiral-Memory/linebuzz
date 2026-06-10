@@ -86,9 +86,14 @@
     ],
     "keybindings": [
       {
+        "command": "-type",
+        "key": "option+b",
+        "when": "editorTextFocus"
+      },
+      {
         "command": "linebuzz.captureSnippet",
         "key": "alt+b",
-        "mac": "alt+b",
+        "mac": "option+b",
         "when": "editorTextFocus"
       }
     ],
