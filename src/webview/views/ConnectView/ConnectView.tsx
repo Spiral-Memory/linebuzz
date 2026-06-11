@@ -96,6 +96,17 @@ export const ConnectView = ({ isLoggedIn, hasTeam, customServerUrl }: ConnectVie
                         </>
                     ) : (
                         <div class={styles['custom-server-form']}>
+                            <div class={styles['setup-info']}>
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class={styles['setup-icon']}>
+                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                                    <line x1="6" y1="6" x2="6.01" y2="6" />
+                                    <line x1="6" y1="18" x2="6.01" y2="18" />
+                                </svg>
+                                <span>
+                                    Don't have a server? Deploy <a href="https://github.com/Spiral-Memory/linebuzz-core/blob/dev/scripts/README.md" target="_blank" rel="noopener noreferrer" class={styles['setup-link']}>linebuzz-core</a>
+                                </span>
+                            </div>
                             <div class={styles['form-group']}>
                                 <input
                                     type="text"
