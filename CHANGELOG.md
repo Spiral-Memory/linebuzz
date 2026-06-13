@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-06-13
+
+### Added
+- Added custom setup card UI for self-hosted server configuration.
+
+### Changed
+- Improved segment diff fallback behavior to display the full file.
+
+### Fixed
+- Fixed command/character input consumption for the macOS `option+b` shortcut.
+
 ## [0.3.2] - 2026-06-10
 
 ### Fixed
