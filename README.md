@@ -16,6 +16,7 @@ Stay in flow with your team using built-in huddles, team management, and persist
 * **Inline Code Discussions**: Comment directly on specific lines of code to keep context.
 * **Smart Deep Linking**: Seamlessly navigate between chat messages and referenced code files.
 * **Slack Integration**: Sync huddle messages, threads, and code attachments with interactive deep links (VS Code / GitHub) to/from your Slack workspace.
+* **Threads**: Create threads for replies and code discussions.
 
 ## **Development** 🛠️
 
@@ -60,7 +61,6 @@ That’s it -> LineBuzz will start running in the new window.
 
 ## **Roadmap 🛣️**
 
-* **Threads**: Create threads for replies and code discussions.
 * **Mentions**: @mention team members and get notified.
 * **Integrations**: Support bridging with additional external platforms.
 * **AI Summaries**: Auto-generated summaries of catch-up conversations.
