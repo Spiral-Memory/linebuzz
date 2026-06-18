@@ -29,11 +29,15 @@ interface Vote {
 
 
 export class RelocatorEngine {
-    private readonly LOOKAHEAD_BUFFER = 50;
-    private readonly MIN_CONFIDENCE_SCORE = 75;
+    private readonly MIN_CONFIDENCE_SCORE = 65;
     private readonly STRECH_THRESHOLD_RATIO = 0.05;
     private readonly MATCH_DENSITY_THRESHOLD_RATIO = 0.4;
     private readonly COLLISION_THRESHOLD = 0.85;
+    private readonly LONG_LINE_THRESHOLD = 120;
+    private readonly MAX_CHUNK_LENGTH = 100;
+    private readonly MIN_CHUNK_LENGTH = 30;
+    private readonly MIN_LAST_CHUNK_LENGTH = 10;
+    private readonly MAX_ANCHOR_COUNT = 15;
 
     public relocate(inputs: RelocationInput[]): RelocationResult[] {
         return inputs.map(input => this.processSingleRelocation(input));
@@ -87,7 +91,7 @@ export class RelocatorEngine {
 
         for (const anchor of anchors) {
             const matches = fuzzball.extract(anchor.text, targetLines, {
-                scorer: fuzzball.token_sort_ratio,
+                scorer: fuzzball.token_set_ratio,
                 limit: 5,
                 returnObjects: true
             });
@@ -166,26 +170,76 @@ export class RelocatorEngine {
         };
     }
     private selectAnchors(lines: string[]): Anchor[] {
-        const anchors: Anchor[] = lines[0] ? [{ text: lines[0], relativeOffset: 0 }] : [];
-
         const lineOffsets = this.calculateLineOffsets(lines.join('\n'));
-        const targetCount = Math.min(20, Math.ceil(lines.length / 5) || 1);
-        const step = Math.max(1, Math.floor(lines.length / targetCount));
-
-        for (let i = step; i < lines.length && anchors.length < 20; i += step) {
-            const segment = lines.slice(i, i + step);
-            const localIdx = segment.findIndex(line => !this.isBoilerPlate(line));
-
-            if (localIdx !== -1) {
-                const globalIdx = i + localIdx;
-                anchors.push({
-                    text: lines[globalIdx],
-                    relativeOffset: lineOffsets[globalIdx]
-                });
+        const candidates: Anchor[] = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!this.isBoilerPlate(line)) {
+                if (line.length > this.LONG_LINE_THRESHOLD) {
+                    const parts = this.splitLongLine(line);
+                    for (const part of parts) {
+                        candidates.push({
+                            text: part.text,
+                            relativeOffset: lineOffsets[i] + part.offset
+                        });
+                    }
+                } else {
+                    candidates.push({
+                        text: line,
+                        relativeOffset: lineOffsets[i]
+                    });
+                }
             }
         }
 
+        if (candidates.length === 0 && lines[0]) {
+            candidates.push({ text: lines[0], relativeOffset: 0 });
+        }
+
+        if (candidates.length <= this.MAX_ANCHOR_COUNT) {
+            return candidates;
+        }
+
+        const anchors: Anchor[] = [];
+        const step = candidates.length / this.MAX_ANCHOR_COUNT;
+        for (let i = 0; i < this.MAX_ANCHOR_COUNT; i++) {
+            anchors.push(candidates[Math.floor(i * step)]);
+        }
         return anchors;
+    }
+
+    private splitLongLine(line: string): { text: string; offset: number }[] {
+        const parts: { text: string; offset: number }[] = [];
+        const words = line.split(' ');
+        let currentChunk = '';
+        let currentOffset = 0;
+        let runningOffset = 0;
+
+        for (const word of words) {
+            if (currentChunk.length + word.length + 1 > this.MAX_CHUNK_LENGTH && currentChunk.trim().length >= this.MIN_CHUNK_LENGTH) {
+                parts.push({ text: currentChunk.trim(), offset: currentOffset });
+                currentOffset = runningOffset;
+                currentChunk = word;
+            } else {
+                if (currentChunk === '') {
+                    currentOffset = runningOffset;
+                    currentChunk = word;
+                } else {
+                    currentChunk += ' ' + word;
+                }
+            }
+            runningOffset += word.length + 1;
+        }
+
+        if (currentChunk.trim().length >= this.MIN_LAST_CHUNK_LENGTH) {
+            parts.push({ text: currentChunk.trim(), offset: currentOffset });
+        }
+
+        if (parts.length === 0 && line.trim()) {
+            parts.push({ text: line.trim(), offset: 0 });
+        }
+        return parts;
     }
 
     private isBoilerPlate(line: string): boolean {
