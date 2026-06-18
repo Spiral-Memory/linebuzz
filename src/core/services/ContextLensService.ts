@@ -139,13 +139,14 @@ export class ContextLensService {
     }
 
     public getDiffArgs(uriStr: string, discussionId: string): any | undefined {
-        const trackedDiscussions = this.cache.get(uriStr);
+        const normalizedUriStr = vscode.Uri.parse(uriStr).toString();
+        const trackedDiscussions = this.cache.get(normalizedUriStr);
         const td = trackedDiscussions?.find(t => t.discussion.id === discussionId);
         if (!td) return undefined;
 
         return {
             originalContent: td.discussion.content,
-            currentFileUri: uriStr,
+            currentFileUri: normalizedUriStr,
             startLine: td.discussion.start_line,
             endLine: td.discussion.end_line,
             liveStartLine: td.liveRange.start.line,
