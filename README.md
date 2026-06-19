@@ -61,9 +61,10 @@ That’s it -> LineBuzz will start running in the new window.
 
 ## **Roadmap 🛣️**
 
-* **Mentions**: @mention team members and get notified.
-* **Integrations**: Support bridging with additional external platforms.
-* **AI Summaries**: Auto-generated summaries of catch-up conversations.
+* **Image Attachments**: Send images directly in chat.
+* **Mentions**: Mention team members and trigger notifications.
+* **Integrations**: Support integration with additional external platforms.
+* **AI Summaries**: Automatically generate summaries for catch-up conversations.
 
 
 ## **Contributing 🤝**

@@ -108,10 +108,12 @@ export class ContextLensService {
                 }));
             }
             else {
+                const hasFailedRelocation = discussionList.some(d => d.relocationStatus?.success === false);
+                const icon = hasFailedRelocation ? '☃️' : '☕';
                 const latestTimestamp = Math.max(...discussionList.map(d => new Date(d.discussion.created_at).getTime()));
                 const timeAgo = formatDistanceToNow(new Date(latestTimestamp), { addSuffix: true });
                 lenses.push(new vscode.CodeLens(discussionList[0].liveRange, {
-                    title: `☕ ${discussionList.length} References, ${timeAgo}`,
+                    title: `${icon} ${discussionList.length} References, ${timeAgo}`,
                     command: "clens.openPeek",
                     arguments: [uri, lineIndex, discussionList]
                 }));
@@ -139,13 +141,14 @@ export class ContextLensService {
     }
 
     public getDiffArgs(uriStr: string, discussionId: string): any | undefined {
-        const trackedDiscussions = this.cache.get(uriStr);
+        const normalizedUriStr = vscode.Uri.parse(uriStr).toString();
+        const trackedDiscussions = this.cache.get(normalizedUriStr);
         const td = trackedDiscussions?.find(t => t.discussion.id === discussionId);
         if (!td) return undefined;
 
         return {
             originalContent: td.discussion.content,
-            currentFileUri: uriStr,
+            currentFileUri: normalizedUriStr,
             startLine: td.discussion.start_line,
             endLine: td.discussion.end_line,
             liveStartLine: td.liveRange.start.line,

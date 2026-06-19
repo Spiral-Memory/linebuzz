@@ -60,6 +60,18 @@ const applyPatch = async (content: string, patch: string, filePath: string): Pro
     }
 };
 
+const revealSelection = async (rightUri: vscode.Uri, selection: vscode.Range) => {
+    for (let i = 0; i < 5; i++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.uri.toString() === rightUri.toString()) {
+            activeEditor.selection = new vscode.Selection(selection.start, selection.end);
+            activeEditor.revealRange(selection, vscode.TextEditorRevealType.InCenter);
+            break;
+        }
+    }
+};
+
 export const showDiffCommand = async (diffReference: any) => {
     try {
         let diffArgs;
@@ -138,6 +150,7 @@ export const showDiffCommand = async (diffReference: any) => {
             const rightUri = ReadOnlyContentProvider.registerContent(`local-current/${uniqueKey}/${filename}`, fullCurrentContent);
 
             await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `${filename}: ${commit_sha.substring(0, 8)} ↔ Current`, { selection });
+            await revealSelection(rightUri, selection);
         }
 
         else {
@@ -152,6 +165,7 @@ export const showDiffCommand = async (diffReference: any) => {
             const rightUri = ReadOnlyContentProvider.registerContent(`current/${uniqueKey}/${filename}`, fullCurrentContent);
 
             await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, { selection });
+            await revealSelection(rightUri, selection);
         }
 
     } catch (e) {
