@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-06-19
+
+### Added
+- Added a long-line chunking algorithm to the code relocator engine for better resilience when handling minified or extended code structures.
+
+### Changed
+- Improved the fuzzy relocator to better handle substring containment matching.
+
+### Fixed
+- Fixed the View Diff feature on Windows.
+
 ## [0.3.3] - 2026-06-13
 
 ### Added
