@@ -286,7 +286,8 @@ export class ContextLensService {
     private updateLiveRanges(event: vscode.TextDocumentChangeEvent) {
         if (event.reason === vscode.TextDocumentChangeReason.Undo ||
             event.reason === vscode.TextDocumentChangeReason.Redo ||
-            event.contentChanges.some(c => c.text.length > 500 || c.rangeLength > 500)) {
+            event.contentChanges.some(c => c.text.length > 500 || c.rangeLength > 500) ||
+            !event.document.isDirty) {
 
             this.cache.delete(event.document.uri.toString());
             vscode.commands.executeCommand('linebuzz.refreshCLens');
