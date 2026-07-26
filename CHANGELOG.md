@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-07-26
+
+### Changed
+- Improved splash screen text wrapping.
+- Adjusted padding on initial screens for better spacing.
+- Updated realignment logic to check the `isDirty` flag before triggering layout updates.
+
+### Fixed
+- Fixed horizontal scrolling issue.
+
 ## [0.3.4] - 2026-06-19
 
 ### Added
