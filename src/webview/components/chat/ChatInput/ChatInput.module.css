@@ -54,7 +54,7 @@
 
 .send-button-icon {
     background: transparent;
-    color: var(--secondary-color);
+    color: var(--disabled-foreground, var(--vscode-disabledForeground, var(--vscode-descriptionForeground)));
     border: none;
     border-radius: 4px;
     padding: 4px;
